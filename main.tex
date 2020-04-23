@@ -1,11 +1,24 @@
-\documentclass[12pt]{article}
-\usepackage[utf8]{inputenc}
+\documentclass[12pt, twoside]{book}
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3.5cm,right=2cm]{geometry}  % page settings
+\usepackage[utf8]{inputenc}  % set encoding to utf-8
+\usepackage[T1]{fontenc}  % more robust typesetting of nonascii characters
+\usepackage{graphicx}  % needed for images
+\usepackage{dsfont}  % for math symbols
+\usepackage{url}  % verbatim with URL-sensitive line breaks
+\usepackage{bm}  % access bold symbols in maths mode
+\usepackage{amsmath}  % AMS mathematical facilities for LaTeX
+\usepackage[hidelinks,breaklinks]{hyperref}  % should be the last to import
 
-\usepackage[top = 2.5cm, bottom = 2.5cm, right = 2.5cm, left = 3.5cm]{geometry}
+\DeclareMathOperator{\PFM}{PFM}
+\DeclareMathOperator{\MSA}{MSA}
+\DeclareMathOperator{\PPM}{PPM}
+\DeclareMathOperator{\PSSM}{PSSM}
 
-\usepackage{subfiles} % should be last
+\linespread{1.25}
+
 \begin{document}
 
+\frontmatter
 \begin{titlepage}
     \begin{center}
         \vspace*{8cm}
@@ -21,22 +34,17 @@
             Supervisor: Christian Storm Pedersen
     \end{center}
 \end{titlepage}
-\pagebreak
 
-\section{Introduction}
-\subfile{Introduction.tex}
+\tableofcontents
 
-\section{Methods}
-\subfile{Methods.tex}
+\mainmatter
+\input{1_introduction.tex}
+\input{2_methods.tex}
+\input{3_results.tex}
+\input{4_conclusion.tex}
 
-\section{Results and Discussion}
-\subfile{Results_and_Discussion.tex}
-
-\section{Conclusion}
-\subfile{Conclusion.tex}
-
-\section{Diaries}
-\subfile{diary_Andy.tex}
-\subfile{diary_Tomas.tex}
+\backmatter
+\bibliographystyle{unsrt}
+\bibliography{bibliography}
 
 \end{document}

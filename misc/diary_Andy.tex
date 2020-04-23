@@ -1,0 +1,126 @@
+\documentclass[main.tex]{subfiles}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+
+\newcommand{\newday}[1]{
+    \section*{#1}
+    \addcontentsline{toc}{section}{#1}%
+}
+
+\begin{document}
+\tableofcontents
+\newpage
+
+\newday{Week 5}
+
+\newday{2020-02-27 - Week 9}
+First run of the Alphafold program was successful.
+Training is done in batches (8 crops per batch).
+The training error and validation error is decreasing as expected.
+
+Open questions:
+What exactly is the input? We need to better understand its interpretation and how we could create it from the raw sequence.
+Why residual network actually works? Is there any interpretation what it actually does?
+
+We still need to figure out how to crop the proteins and write functions how to do it and how to merge multiple crop results into the distogram.
+We should use the GPU at cluster and tune the parameters of the model.
+
+What are our next steps? 
+Suggestions:
+Figure out the different measurement for correctness of the distogram. What did they use in CASP?
+Create inputs from scratch? At least a small fraction of input.
+Start looking at consecutive steps for 3D structure prediction.
+Should we use the secondary structure losses and torsion angles losses? How?
+
+Why don't we use distributions as the outcome of the neural network? The bins do not take "close enough" results into account and are punishing them in the same way as the completely incorrect predictions.
+
+Why are we predicting the beta-carbons? Isn't it better to predict protein skeleton (alpha carbons) first and then figure out the rotation of the amino acids? 
+
+In the original paper, they mention 3 models. From input to distogram, from distogram to 3D structure and some autoencoder somewhere. WTF is the autoencoder? 
+
+\newday{2020-02-28 - Week 9}
+We used depthwise dilated convolutions in the middle of RESNET block to reduce the parameters of the model. This will hopefully speed up the computation. The parameter number decreased from 36864 to 576 per inner convolution layer.
+
+We agreed, that our first alphafold model will be unregularized and using only inner crops.
+We talked about training function, which will accumulate inner crops (so N is for example 64) and then will run this in batches on GPU to properly utilize GPU memory.
+
+In the morning we discussed our disappointment from the binning approach.
+In the next iteration, we could implement neural network, which predicts mean and standard deviation of the predicted distance. (possibly using some better-suited parametric distribution than normal - bounded from top and bottom)
+This could then be used to find solution constrained by 3D euclidean space.
+
+There are two possible continuations now. 
+Discover the steps needed to get from amino acid sequence to the input of alphafold or tackle the challenge of constrained optimization from distogram to 3D structure.
+
+\newday{2020-03-02 - Week 10}
+The residual network depth is very important factor for training. With the depth 4 the network was not able to learn anything. I have been debugging this for a few days. At the end it was only needed to change one parameter - depth. After setting the parameter to 64, network was able to overfit one given protein to training error 0.0037. The script seems to work now.
+
+I successfully visualized the predicted results. On the overfitted region it is really good, but the region which was not part of the crops is terrible - which is kinda expected.
+
+I also discovered, that there are membrane proteins in the dataset. Since they are going through a little bit different folding process than the globular proteins, I think it could be beneficial to have 2 neural networks, one for globular proteins and second for the membrane proteins.
+
+I've also found a bug (one-of error) in the cropping function. It is now fixed.
+
+\newday{2020-03-05 - Week 10}
+I tried to put the training of the neural network to the GPU. According to the manufacturer, the improvement in speed should be 32x. I think, this can be true.
+The disadvantage is that I am strongly limited by the vram memory, which is 15,11GB.
+In the prospr paper, they used batch size 8, crop size 64 and RESNET depth 220.
+I figured out, this RESNET depth is a little bit bigger than what we are able to put on our GPU, but the depth 210 should be fine.
+Should it be divisible by 4?
+Does it matter how I cycle through the dilations?
+Why am I still getting increasing loss.
+Should I use googles alphafold?
+
+Keyword: Ramachandran plot
+
+\newday{2020-03-06 - Week 10}
+It seems like, training on one protein destrois the loss for another.
+Possible solution could be if batches would be crops from the same region of different protein.
+
+This solution helped. Another problem is how to actually compute that our neural network is better than random model.
+I was expecting loss of 4.something to be better than random.
+Simulation showed, that this is not completely the case. Further experiments are needed.
+I suggest permutation tests, where I will permute the Y variable randomly.
+I wanted to write lot more, but it is late and my brain is not working... I am out.
+
+permutation test
+merge crops
+auxiliary output
+
+\newday{2020-03-06 - Week 11}
+Today I found out that the data and the predictions generated from randomly initialized model are highly non-random.
+Randomly generated input X created significantly non-random pattern in the predicted values.
+This effect was further increased when using the original input X for generating predictions.
+The possible explanations could be, that the initialization of the network is not optimal.
+
+Another interesting remark is that the training error firstly goes up, destroying the non-random pattern, then hits the local maximum and from that point it goes down (seemingly forever).
+
+Previously, I though the learning rate is not changing anything during the training.
+This hypothesis is refuted by todays experiments. I tried learning rate 1e-3, 1e-6 and 1e-9.
+Best performance was using the 1e-3 similarly as in the publication.
+Other rates were to slow, climbing just the first peak and then going down so slowly we would be here for ages.
+This got me thinking, that maybe we should use some kind of scheduler to change the learning rate.
+Pytorch offers multiple options, so one of the next steps should be to try them.
+
+I should also save some nice plots and put them here (because today I created some, but then I was an idiot a closed them).
+
+The implementation of the models.py file seem to work perfectly, everything is behaving as expected, which I confirmed today with multiple experiments.
+
+\newday{2020-03-27}
+distances:
+Calpha to C = 1.53A
+C to N = 1.33A
+C to Calpha = 1.46A
+% (source: https://www.ruppweb.org/Xray/tutorial/protein_structure.htm)
+
+Calpha to Calpha = 3.80A
+% (source: https://en.wikipedia.org/wiki/Alpha_and_beta_carbon)
+
+Carbon has 3 possible connection configurations:
+connected to 4 other atoms = angle between bonds = 109.5
+connected to 3 other atoms = 120.0
+connected to 2 other atoms = 180.0
+% (source: https://www2.chemistry.msu.edu/faculty/reusch/VirtTxtJml/intro3.htm)
+% (http://bioinformatics.org/molvis/phipsi/)
+
+
+\end{document}
