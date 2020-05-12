@@ -252,7 +252,7 @@ It will ensure that the probabilities in the PPM will be non-zero and it also ac
 %     \label{fig:cath_filtered}
 % \end{figure}
     
-\subsection{Train/Validation/Test split}
+\subsection{Train Validation Test split}
     
 In the AlphaFold paper \cite{alphafold}, the authors decided to create train/validation/test set of homologous superfamilies instead of randomly picking the domain. 
 The rationale behind this is to include all members of each homologous superfamily in either training, validation or test set. 
@@ -324,128 +324,245 @@ The categories are shown in table \ref{tab:dssp}.
         
 On top of the secondary structure classification, the output of the DSSP program also conveniently includes the torsion angles $\phi$ and $\psi$.
         
+\input{2_neural_networks}
+
 \section{Structure Realization}
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.5]{imgs_tomas/backbone.png}
+    \caption{Protein backbone with atom names. Modified picture from \cite{ramachandran}}
+    \label{fig:backbone}
+\end{figure}
+
+The structure realization step refers to a process of optimizing three dimensional conformation of protein according to some constraints or energy/potential function. If we assume that the bonds between neighboring atoms in the backbone (atoms N, C$_\alpha$ and C) + C$_\beta$ atom is constant as well as the angle between atoms in the same plane (angles N-C$_{\alpha}$-C, C$_{\alpha}$-C-N, C-N-C$_{\alpha}$) then the entire structure can be fully described by a set of three torsion angles $\phi$, $\psi$ and $\omega$.
+
+This assumption allows us to create a model of protein geometry $\mathcal{G}(\phi, \psi)$ that can be optimized ($\omega$ is almost always 180\degree, and so was treated as a constant). We can use the predicted distance histograms (distograms) together with predicted angle distributions to find a structure which inter-residue distances and torsion angles are as close as possible to the modes of these distributions.
+
+In the following sections we will describe how we tackled the protein geometry problem, together with explanation of torsion angles and a short recap of basic linear algebra operations that were used. In the second part we will describe the optimization process.
+
+\subsection{Torsion Angles}
+
+\begin{figure}
+    \centering
+    % \includegraphics[scale=0.27]{imgs_tomas/torsion.png}
+    \includegraphics[width=\linewidth]{imgs_tomas/torsion.png}
+    \caption{Torsion Angles - planes and inter-atom distance and angles notation}
+    \label{fig:torsion}
+\end{figure}
+
+Torsion angle, or a dihedral angle, is an angle defined by two intersecting planes. A protein is essentially composed of a sequence of aminoacids, where every aminoacid contains atoms N, C$_\alpha$ and C and almost all (except of glycine) contain a C$_\beta$ atom with a residue.
+The C$_\beta$ has a bond with the C$_\alpha$ atom - Figure \ref{fig:backbone} depicts the individual atoms of the backbone together with C$_\beta$ atom.
+
+Since there are three atoms in the backbone, we can define three pairs of intersecting planes and thus define the three torsion angles (Figure \ref{fig:torsion}). Knowing the position of three preceding atoms, the torsion angle $\phi$ defines the position of the next C atom, the torsion angle $\psi$ defines the position of the next N atom and finally $\omega$ defines the position of the next C$_\alpha$ atom. The bond between atom C and N in the protein backbone is a peptide bond that behaves similarly to a double bond and is almost always equal to 180\degree~(trans isomerism; 0\degree~for cis configuration).
+
+Seeing that essentialy each torsion angle defines a position of an atom in relation to the previous three atoms in the structure, which are placed in a single plane, we can simplify the problem to follwing steps:
+
+\begin{enumerate}
+    \item Place the atom in the same plane as the previous three atoms, satisfying the inter-atom angles and distances (eg. for placing atom N$_1$, we need to know position of N$_0$, C$_{\alpha 0}$ and C$_0$ and angles NC$_\alpha$C and C$_\alpha$CN).
     
-This is the final step of the entire pipeline. 
-Knowing that the tertiary structure can be fully described by its torsion angles, we would like to find a set of torsion angles so that the induced inter-residue distances are as close as possible to the predicted ones. 
-        
-This explanation should clarify the decision of treating the inter-residue distance prediction (and torsion angles) as a classification problem rather than as a regression one. 
-Instead of predicting a single number, we decided to generate a histogram of distances and torsions. 
-In the next step the authors of the AlphaFold paper fitted a 3rd-degree spline the distograms and von-Misses distribution \footnote{von Mises distribution is a continouous distribution defined on a circle in range $[0, 2\pi)$ with a bell like shape. Formally its probability density function is $\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$ where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
-The $\kappa$ parameter is a called concentration and describes the dispersion. 
-$\mu$ is the mean direction of the distribution \cite{vonmises}} to the torsion angles distributions. 
-This is a neccessary step that ensures the smoothness of the distributions and allows the calculation of partial derivatives.
-        
-We would like to create a model of the protein structure - $\mathcal{G}(\phi, \psi)$ ($\phi$ and $\psi$ are the torsion angles) which returns the distances between residues. 
-These induced distance should be as close as possible to the predicted ones (together with the torsions). 
-Thus we can define a loss function/potential:
-        
+    \item Define a vector $\bm{v}$ as the difference between the coordinates of the new atom and the last atom in the structure (eg. $\bm{v} = $N$_1$ - C$_0$).
+    
+    \item Define a unit vector $\bm{k}$ around which the vector $\bm{v}$ will be rotated. This vector lies at the intersection of the two planes (eg. $\bm{k} = \frac{\textrm{C}_0 - \textrm{C}_{\alpha 0}}{d_{\textrm{C}_{\alpha} \textrm{C}}}$)
+    
+    \item Rotate the vector $\bm{v}$ around an axis with unit vector $\bm{k}$ and move it by adding the coordinates of the last atom in the structure
+\end{enumerate}
+
+These steps will be described in further detail in following section. Figure \ref{fig:bond_rotation} visualizes the steps except of the vector translocation.
+
+% !!! REDO !!!
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.28]{imgs_tomas/rodrigues_backbone.png}
+    \caption{Torsion angle rotation as vector rotation}
+    \label{fig:bond_rotation}
+\end{figure}
+
+\subsection{Background - Vector Cross-product}
+
+The cross product $\bm{v} \times \bm{w}$ of two 3D vectors is a vector pointing to a direction perpendicular to both vectors (decided by the right hand rule, where if $\bm{v}$  is represented by a thumb and $\bm{w}$ as index finger, than the direction is given by the middle finger). The size of this vector is equivalent to the area of the parallelogram with sites of sizes $||\bm{v}||$ and $||\bm{w}||$.
+
+Formally the cross-product is a determinant of a special matrix with first column being the unit vectors $u_x$, $u_y$ and $u_z$ of the cartesian coordinate system and the rest are vectors $v$ and $w$:
+
+$$\bm{v} \times \bm{w} = det
+\left(
+\begin{array}{ccc}
+    u_x & v_{x} & w_{x}\\
+    u_y & v_{y} & w_{y}\\
+    u_z & v_{z} & w_{z}\\
+\end{array}
+\right) = ||\bm{v}||~||\bm{w}||~sin(\alpha)~\bm{n}
+$$
+
+where $\alpha$ is the angle between the two vectors and $\bm{n}$ is the unit normal vector perpendicular to both vectors.
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.23]{imgs_tomas/vector_ops.png}
+    \caption{Visual demonstration of vector cross-product - a) and scalar/dot product - b)}
+    \label{fig:vector ops}
+\end{figure}
+
+\subsection{Background - Vector Dot-product}
+The dot product $\bm{k} \cdot \bm{v}$ is an operation that projects vector $\bm{v}$ onto a line defined by vector $\bm{k}$ and then scales the projection by the size of vector $\bm{k}$. In the special case when $\bm{k}$ is a unit vector, the result is a simple projection. Formally:
+
+$$\bm{k} \cdot \bm{v} = ||\bm{k}||~||\bm{v}||~cos(\alpha) = k_x v_x + k_y v_y + k_z v_z$$
+
+where $\alpha$ is the angle between the two vectors.
+
+\subsection{Vector Rotation}
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=3]{imgs_tomas/rodrigues_3d2d.png}
+    \caption{Caption}
+    \label{fig:rodrigues3d2d}
+\end{figure}
+
+Lets assume that there is a vector $\bm{v}$ and a vector $\bm{k}$. Our task is to find vector $\bm{v_{rot}}$ which is a rotated version of vector $\bm{v}$ around a line defined by vector $\bm{k}$. Figure \ref{fig:rodrigues3d2d} depicts all the vectors and operations used in the following parapgraphs.
+
+The first step is to redefine the coordinate system, in terms of 3 unit vectors: one is vector $\bm{k}$, second is a vector perpendicular to both $\bm{k}$ and $\bm{v}$: $\bm{n} = \frac{\bm{k} \times \bm{v}}{||\bm{k} \times \bm{v}||}$ and third a vector perpendicular to both $\bm{n}$ and $\bm{k}$: $\bm{m} = \bm{n} \times \bm{k}$.
+
+\begin{enumerate}
+    \item "$\bm{k}$ axis"
+    
+    The new rotated vector will always be the same distance away in the $\bm{k}$ vector direction. The amount is the projection of $\bm{v}$ onto $\bm{k}$, which is $\bm{k} \cdot \bm{v}$.
+    
+    \item "$\bm{n}$ axis"
+    
+    The amount by which we need to scale the unit vector $\bm{n}$ is the $sin(\theta)$ multiplied by the radius of the circle in the Figure \ref{fig:rodrigues3d2d}. The radius of the circle is a dot product of vector $\bm{m}$ and the initial vector $\bm{v}$.
+    \item "$\bm{m}$ axis"
+    
+    The same reasoning as above, but this time the radius has to be multiplied by the cosine of $\theta$.
+\end{enumerate}
+
+All together, the rotational formula is:
+
+\begin{equation}
+    v_{rot} = \bm{k}(\bm{k} \cdot \bm{v}) + \bm{n} (\bm{m} \cdot \bm{v}) sin(\theta) + \bm{m} (\bm{m} \cdot \bm{v}) cos(\theta)
+    \label{eq:rotformula}
+\end{equation}
+
+\subsection{Beta carbon atom placement}
+% $C_{\beta}$
+
+\begin{figure}
+    \centering
+    % \includegraphics[scale=0.25]{imgs_tomas/cbeta.png}
+    \includegraphics[width=\linewidth]{imgs_tomas/cbeta.png}
+    \caption{Caption}
+    \label{fig:cbeta}
+\end{figure}
+
+To place the C$_{beta}$ we used the rotational formula \ref{eq:rotformula} but the vectors $\bm{v}$ and $\bm{k}$ had to be computed from the coordinates. If vector $\bm{v}_{C_\alpha N}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the N atom and $\bm{v}_{C_\alpha C}$ is a unit vector in the same direction as the bond between the C$_alpha$ atom and the C atom, then the vectors $\bm{v}$ and $\bm{k}$ are:
+
+$$\bm{v} = \bm{v}_{C_\alpha N} \times  \bm{v}_{C_\alpha C}, ~~ \bm{k} = \frac{\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}}{||\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}||}$$
+
+After applying the rotational formula \ref{eq:rotformula}, scaling the unit vector $\bm{v_rot}$ by the length of the bond and adding the coordinates of the C$_\alpha$ atom the coordinate of the C$_\beta$ can be calculated.
+
+Visual representation of the vectors and the operations can be seen on Figure \ref{fig:cbeta}.
+\subsection{Protein structure optimization}
+
+The entire protein structure defined by the set of two torsion angles was derived by successfully applying the rotational formula (\ref{eq:rotformula}), with the first three atoms arbitrarily placed. The coordinate of C$_\beta$ atom (C$_\alpha$ for glycin) was used to compute the inter-residue distances.
+
+The protein geometry was implemented in \texttt{pytorch}, which means that the two torsion angles can be used as parameters to the model. \texttt{pytorch} allows for tracking the operations and builds a computational graph, which can then be efficiently backtracked and the gradients with regard to each parameter can be computed. 
+
+In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids torgether with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure.
+
+We used this distributions as a guide for the optimization process and defined a loss function:
+
 \begin{equation}
     V(\phi, \psi) = V_{dist}(\mathcal{G}(\phi, \psi)) + V_{torsion}(\phi, \psi)
 \end{equation}
-        
-where \cite{alphafold}(supplementary information):
-        
+
+where $ V_{dist}(\mathcal{G}(\phi, \psi))$ is a distance potential and $V_{torsion}(\phi, \psi)$ is torsion angle potential. Both of these quantities are essentialy negative log likelihood formulas:
+
 \begin{equation}
-     V_{dist}(\mathcal{G}(\phi, \psi)) = -log\left(\sum_{i, j, i \neq j} \mathds{P} (d_{ij} | S, MSA(S)\right)
+     V_{dist}(\mathcal{G}(\phi, \psi)) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
 \end{equation}
 
 \begin{equation}
-    V_{torsion}(\phi, \psi) = -log\left(\sum_{i, j, i \neq j} \mathds{P}_{von Mises} (\phi, \psi | S, MSA(S)\right)
+    V_{torsion}(\phi, \psi) = -\sum_{i} log[\mathds{P}_{von Mises} (\phi, \psi | S, MSA(S))]
 \end{equation}
-        
-Since this is an optimization problem, we can approach a good solution with a gradient descent algorithm. 
+
+which compute the log probability of a distribution at a certain value (\cite{alphafold} - supplementary information). In order for this to work properly, one has to work with smooth distributions (ie. derivatives can be calculated).
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.14]{imgs_tomas/histograms.png}
+    \caption{Spline fitted distance histograms (middle) and von-Mises fitted $\phi$ angle distributions (right) in the red region displayed on the distance map on the left}
+    \label{fig:smooth_fits}
+\end{figure}
+
+We fitted a 3rd-degree spline to the distance histograms and von-Misses distribution \footnote{von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is $\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$ where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
+The $\kappa$ parameter is a called concentration and describes the dispersion. 
+$\mu$ is the mean direction of the distribution \cite{vonmises}} to the torsion angles distributions. 
+These two distributions were also used by the authors of the AlphaFold project \cite{alphafold}.
+
 Because there are so many possible protein conformations, the optimization is highly influenced by the initial conditions. 
 The torsion angles can be sampled from the predicted distributions and ideally the optimization process is run several times.  
         
-\subsection{Simplified case in 2D}
-Lets imagine the protein as a string of beads, where the beads right next to each other are constant distance away - lets call it $r$. 
-Any conformation of such string can be fully described by the signed successive polar angles - see Figure \ref{fig:struct_real2d}.
+% \subsection{Simplified case in 2D}
+% Lets imagine the protein as a string of beads, where the beads right next to each other are constant distance away - lets call it $r$. 
+% Any conformation of such string can be fully described by the signed successive polar angles - see Figure \ref{fig:struct_real2d}.
         
-\begin{figure}[ht]
-    \centering
-    \includegraphics[scale=0.22]{imgs_tomas/simplified_2d.png}
-    \caption{Caption}
-    \label{fig:struct_real2d}
-\end{figure}
+% \begin{figure}[ht]
+%     \centering
+%     \includegraphics[scale=0.22]{imgs_tomas/simplified_2d.png}
+%     \caption{Caption}
+%     \label{fig:struct_real2d}
+% \end{figure}
         
-The left part of the figure introduces the notation when working with complex numbers. 
-The right part shows an arrangement of 5 residues in 2D space. 
-The grey-filled circles represent amino acid residues and the black vectors are the connections between residues of constant size $r$. 
-The first vector (connecting residue 0 and residue 1) is anchored at the origin. 
-The colorized vectors coming from the origin are translated versions of the remaining vectors. 
+% The left part of the figure introduces the notation when working with complex numbers. 
+% The right part shows an arrangement of 5 residues in 2D space. 
+% The grey-filled circles represent amino acid residues and the black vectors are the connections between residues of constant size $r$. 
+% The first vector (connecting residue 0 and residue 1) is anchored at the origin. 
+% The colorized vectors coming from the origin are translated versions of the remaining vectors. 
         
-In order to compute the distance between two residue, for example distance between residiue 0 and residue 4 (shown as a dotted line on the right hand side of the Figure \ref{fig:struct_real2d}) we need to add the contributions of every vector between those two points, ie:
+% In order to compute the distance between two residue, for example distance between residiue 0 and residue 4 (shown as a dotted line on the right hand side of the Figure \ref{fig:struct_real2d}) we need to add the contributions of every vector between those two points, ie:
         
-$$\bm{d_{0,4}} = \bm{d_{0,1}} + \bm{d_{1,2}} + \bm{d_{2,3}} + \bm{d_{3,4}}$$
+% $$\bm{d_{0,4}} = \bm{d_{0,1}} + \bm{d_{1,2}} + \bm{d_{2,3}} + \bm{d_{3,4}}$$
         
-The magnitude of a complex number can be easily calculated from the Pythagorean formula:
+% The magnitude of a complex number can be easily calculated from the Pythagorean formula:
         
-\begin{equation}
-    |z|^2 = x^2 + y^2 = cos^2(\theta) + sin^2(\theta)
-    \label{eq:complex_magnitude}
-\end{equation}
+% \begin{equation}
+%     |z|^2 = x^2 + y^2 = cos^2(\theta) + sin^2(\theta)
+%     \label{eq:complex_magnitude}
+% \end{equation}
         
-The distance (in general) is:
+% The distance (in general) is:
         
-\begin{equation}
-    d_{i,j}^2 = r^2 |\bm{d_{0,1}} + \bm{d_{1,2}} + ... + \bm{d_{j-2,j-1}} + \bm{d_{j-1,j}}|^2
-    \label{eq:dist_gen}
-\end{equation}
+% \begin{equation}
+%     d_{i,j}^2 = r^2 |\bm{d_{0,1}} + \bm{d_{1,2}} + ... + \bm{d_{j-2,j-1}} + \bm{d_{j-1,j}}|^2
+%     \label{eq:dist_gen}
+% \end{equation}
         
-In complex representation (using both equation \ref{eq:complex_magnitude} and \ref{eq:dist_gen}):
+% In complex representation (using both equation \ref{eq:complex_magnitude} and \ref{eq:dist_gen}):
         
-\begin{equation}
-    d_{i,j}^2 = r^2 \left|\sum_{k=i}^j cos(\theta_k) + i sin(\theta_k)\right|^2 = r^2 \left[\left(\sum_{k=i}^j cos(\theta_k)\right)^2 + \left(\sum_{k=i}^j sin(\theta_k)\right)^2\right]
-    \label{eq:dist_2d}
-\end{equation}
+% \begin{equation}
+%     d_{i,j}^2 = r^2 \left|\sum_{k=i}^j cos(\theta_k) + i sin(\theta_k)\right|^2 = r^2 \left[\left(\sum_{k=i}^j cos(\theta_k)\right)^2 + \left(\sum_{k=i}^j sin(\theta_k)\right)^2\right]
+%     \label{eq:dist_2d}
+% \end{equation}
         
-\subsection{Simplified case: 3D}
+% \subsection{Simplified case: 3D}
         
-In 3D, the case is almost the same as in 2D, we just need use another angle ($\phi$) to fully describe the arrangement. 
-The transformation of Cartesian coordinates to polar is:
+% In 3D, the case is almost the same as in 2D, we just need use another angle ($\phi$) to fully describe the arrangement. 
+% The transformation of Cartesian coordinates to polar is:
         
-$$x = r cos(\theta) sin(\phi)$$
-$$y = r sin(\theta) sin(\phi)$$
-$$z = r cos(\phi)$$
+% $$x = r cos(\theta) sin(\phi)$$
+% $$y = r sin(\theta) sin(\phi)$$
+% $$z = r cos(\phi)$$
    
-The distance between two residues $i$ and $j$ in 3D is (just as in the 2D case) the magnitude of a vector pointing from residue $i$ to residue $j$. 
-This vector is again the sum of all vectors between these two residues. 
-Similarly to equation \ref{eq:dist_2d}, the formula for calculating (squared) distance between two residues in 3D is:
+% The distance between two residues $i$ and $j$ in 3D is (just as in the 2D case) the magnitude of a vector pointing from residue $i$ to residue $j$. 
+% This vector is again the sum of all vectors between these two residues. 
+% Similarly to equation \ref{eq:dist_2d}, the formula for calculating (squared) distance between two residues in 3D is:
         
-\begin{equation}
-    d_{i,j}^2 = r^2 \left[\left(\sum_{k=i}^j cos(\theta_k) sin(\phi_k)\right)^2 + \left(\sum_{k=i}^j sin(\theta_k) sin(\phi_k)\right)^2 + \left(\sum_{k=i}^j cos(\phi_k)\right)^2\right]
-\end{equation}
+% \begin{equation}
+%     d_{i,j}^2 = r^2 \left[\left(\sum_{k=i}^j cos(\theta_k) sin(\phi_k)\right)^2 + \left(\sum_{k=i}^j sin(\theta_k) sin(\phi_k)\right)^2 + \left(\sum_{k=i}^j cos(\phi_k)\right)^2\right]
+% \end{equation}
         
-\subsection{Full Model}
+% \subsection{Full Model}
 
-\section{Train/Validation/Test split}
-    
-\section{Neural Networks}
-
-\begin{itemize}
-    \item Why Neural Networks?
-\end{itemize}
-
-\subsection{Basic FCNN}
-
-\begin{itemize}
-    \item Forward, Loss, Backward, parameter initialization
-    \item Activations
-    \item weights/parameters
-\end{itemize}
-
-\subsection{CNN}
-
-\begin{itemize}
-    \item Channels, Conv layers, Pool layers
-\end{itemize}
-
-\subsection{ResNets}
-    
-\subsection{AlphaFold}
-    
-\section{Structure Realization}
 \subsection{Naive approach}
 pca - eigenvalue decomposition - tomas will explain
 \subsection{Contact maps for struct realization}
