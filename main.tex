@@ -9,16 +9,28 @@
 \usepackage{bm}  % access bold symbols in maths mode
 \usepackage{listings}  % code input
 \usepackage{amsmath}  % AMS mathematical facilities for LaTeX
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{mathtools}
 \usepackage[hidelinks,breaklinks]{hyperref}  % should be the last to import
 \usepackage{textcomp,gensymb}
+\usepackage{hyperref}
 % \usepackage{gensymb}
+
+% for Figure and Table Captions
+\usepackage[font=small,labelfont=bf, textfont = it, justification = centering]{caption}
 
 \DeclareMathOperator{\PFM}{PFM}
 \DeclareMathOperator{\MSA}{MSA}
 \DeclareMathOperator{\PPM}{PPM}
 \DeclareMathOperator{\PSSM}{PSSM}
 
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+
 \linespread{1.25}
+
+\usepackage[style=numeric]{biblatex}
+\addbibresource{bibliography.bib}
 
 \begin{document}
 
@@ -48,7 +60,7 @@
 \input{4_conclusion.tex}
 
 \backmatter
-\bibliographystyle{unsrt}
-\bibliography{bibliography}
-
+%\bibliographystyle{unsrt}
+%\bibliography{bibliography}
+\printbibliography
 \end{document}

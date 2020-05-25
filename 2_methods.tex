@@ -22,7 +22,7 @@ This co-evolution of spatially proximal amino acids should be reflected in the M
 In order to generate a MSA for a selected domain, one has to first find proteins that share some ancestry with it (homologs), which is done by searching through database of sequences and picking proteins that have certain sequence similarity. 
 From these sequences we can generate the MSA.
     
-From the MSA we can calculate the propensities of amino acids at each position of the sequence very easily, which yields the Postion Specific Scoring Matrix (PSSM). 
+From the MSA we can calculate the propensities of amino acids at each position of the sequence very easily, which yields the Position Specific Scoring Matrix (PSSM). 
 To model the interaction we can use the Direct Coupling Analysis (Potts model).
     
 This section is going to be organised as follows. 
@@ -76,8 +76,11 @@ The distributions of CATH classes can be seen in Figure \ref{fig:cath_filtered}.
     \label{fig:cath_filtered}
 \end{figure}
 
-\subsection{Sequence search and MSA}
+\subsection{Sequence search and MSA construction}
 
+% At the bottom of the input preparation pipeline lies the sequence search step. The goal of an algorithm is to efficiently search large databases of sequences and picking ones that satisfy some similarity measure.
+
+% The first method which we used - PSIBlast, iteratively constructs Position Specific Scoring Matrices which are used to compute score of candidate sequences (more on PSSMs in the subsection below). If the score exceeds some threshold the candidate sequence is added to the pool, from which the PSSM for the next iteration is computed. In the first iteration the sequences are compared using amino acid substitution matrix (eg. BLOSUM62).  
 
 \subsection{Potts Models}
 
@@ -143,7 +146,7 @@ Instead of considering the entire space of possible sequences, we can ask about 
 The probability function in (\ref{eq:potts_loss}) becomes:
         
 $$
-P(\sigma_{r} = \sigma_r^{(b)} | \bm{\sigma}_{\setminus r} = \bm{\sigma}_{\setminus r}^{(b)}) = \frac{exp \left(h_r \sigma_r^{(b)} + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(\sigma_r^{(b)}, \sigma_i^{(b)})\right)}{\sum_{q \in \mathcal{A}} exp \left(h_r(q) + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(q, \sigma_i^{(b)})\right)}$$
+P(\sigma_{r} = \sigma_r^{(b)} | \bm{\sigma}_{\setminus r} = \bm{\sigma}_{\setminus r}^{(b)}) = \frac{exp \left(h_r (\sigma_r^{(b)}) + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(\sigma_r^{(b)}, \sigma_i^{(b)})\right)}{\sum_{q \in \mathcal{A}} exp \left(h_r(q) + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(q, \sigma_i^{(b)})\right)}$$
         
 This function is again, differentiable, although it does not minimize the loss defined in (\ref{eq:potts_loss}).
 However, as opposed to \ref{potts_loss_ml}, this objective function can be computed in reasonable time with gradient descent techniques (either first order optimization or second order optimization approximation via algorithms such LBFG-S)\cite{potts1, potts2}.
@@ -343,18 +346,18 @@ In the following sections we will describe how we tackled the protein geometry p
 
 \subsection{Torsion Angles}
 
-\begin{figure}
-    \centering
-    % \includegraphics[scale=0.27]{imgs_tomas/torsion.png}
-    \includegraphics[width=\linewidth]{imgs_tomas/torsion.png}
-    \caption{Torsion Angles - planes and inter-atom distance and angles notation}
-    \label{fig:torsion}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     % \includegraphics[scale=0.27]{imgs_tomas/torsion.png}
+%     \includegraphics[width=\linewidth]{imgs_tomas/torsion.png}
+%     \caption{Torsion Angles - planes and inter-atom distance and angles notation}
+%     \label{fig:torsion}
+% \end{figure}
 
-Torsion angle, or a dihedral angle, is an angle defined by two intersecting planes. A protein is essentially composed of a sequence of aminoacids, where every aminoacid contains atoms N, C$_\alpha$ and C and almost all (except of glycine) contain a C$_\beta$ atom with a residue.
-The C$_\beta$ has a bond with the C$_\alpha$ atom - Figure \ref{fig:backbone} depicts the individual atoms of the backbone together with C$_\beta$ atom.
+% Torsion angle, or a dihedral angle, is an angle defined by two intersecting planes. A protein is essentially composed of a sequence of aminoacids, where every aminoacid contains atoms N, C$_\alpha$ and C and almost all (except of glycine) contain a C$_\beta$ atom with a residue.
+% The C$_\beta$ has a bond with the C$_\alpha$ atom - Figure \ref{fig:backbone} depicts the individual atoms of the backbone together with C$_\beta$ atom.
 
-Since there are three atoms in the backbone, we can define three pairs of intersecting planes and thus define the three torsion angles (Figure \ref{fig:torsion}). Knowing the position of three preceding atoms, the torsion angle $\phi$ defines the position of the next C atom, the torsion angle $\psi$ defines the position of the next N atom and finally $\omega$ defines the position of the next C$_\alpha$ atom. The bond between atom C and N in the protein backbone is a peptide bond that behaves similarly to a double bond and is almost always equal to 180\degree~(trans isomerism; 0\degree~for cis configuration).
+% Since there are three atoms in the backbone, we can define three pairs of intersecting planes and thus define the three torsion angles (Figure \ref{fig:torsion}). Knowing the position of three preceding atoms, the torsion angle $\phi$ defines the position of the next C atom, the torsion angle $\psi$ defines the position of the next N atom and finally $\omega$ defines the position of the next C$_\alpha$ atom. The bond between atom C and N in the protein backbone is a peptide bond that behaves similarly to a double bond and is almost always equal to 180\degree~(trans isomerism; 0\degree~for cis configuration).
 
 Seeing that essentialy each torsion angle defines a position of an atom in relation to the previous three atoms in the structure, which are placed in a single plane, we can simplify the problem to follwing steps:
 
@@ -461,46 +464,97 @@ $$\bm{v} = \bm{v}_{C_\alpha N} \times  \bm{v}_{C_\alpha C}, ~~ \bm{k} = \frac{\b
 After applying the rotational formula \ref{eq:rotformula}, scaling the unit vector $\bm{v_rot}$ by the length of the bond and adding the coordinates of the C$_\alpha$ atom the coordinate of the C$_\beta$ can be calculated.
 
 Visual representation of the vectors and the operations can be seen on Figure \ref{fig:cbeta}.
-\subsection{Protein structure optimization}
 
-The entire protein structure defined by the set of two torsion angles was derived by successfully applying the rotational formula (\ref{eq:rotformula}), with the first three atoms arbitrarily placed. The coordinate of C$_\beta$ atom (C$_\alpha$ for glycin) was used to compute the inter-residue distances.
+\subsection{Gradient Descent Based Structure Optimization}
 
-The protein geometry was implemented in \texttt{pytorch}, which means that the two torsion angles can be used as parameters to the model. \texttt{pytorch} allows for tracking the operations and builds a computational graph, which can then be efficiently backtracked and the gradients with regard to each parameter can be computed. 
+Gradient descent is method for gradual optimization of parameters of a model with a goal of decreasing some loss function. By model we understand a set of mathematical operations that take as an input the parameters and generate an output. 
 
-In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids torgether with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure.
+In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second step of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids together with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure. The distributions of distances and torsion angles were used in the structure optimization algorithm to define a loss function and to create several random initial states of structures by sampling from the torsion angle distributions.
 
-We used this distributions as a guide for the optimization process and defined a loss function:
-
-\begin{equation}
-    V(\phi, \psi) = V_{dist}(\mathcal{G}(\phi, \psi)) + V_{torsion}(\phi, \psi)
-\end{equation}
-
-where $ V_{dist}(\mathcal{G}(\phi, \psi))$ is a distance potential and $V_{torsion}(\phi, \psi)$ is torsion angle potential. Both of these quantities are essentialy negative log likelihood formulas:
-
-\begin{equation}
-     V_{dist}(\mathcal{G}(\phi, \psi)) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
-\end{equation}
-
-\begin{equation}
-    V_{torsion}(\phi, \psi) = -\sum_{i} log[\mathds{P}_{von Mises} (\phi, \psi | S, MSA(S))]
-\end{equation}
-
-which compute the log probability of a distribution at a certain value (\cite{alphafold} - supplementary information). In order for this to work properly, one has to work with smooth distributions (ie. derivatives can be calculated).
+Gradient descent is a widely used method in many machine learning algorithms, and the main optimization technique for Neural Networks (see Algorithm \ref{alg:gd}). The algorithm simply finds a direction in the space of parameters, in which the loss function decreases the fastest and moves in this direction. This is repeated many times until the process is stopped. Algorithm \ref{alg:strucreal_gd} sketches the steps of the optimization steps, which will be explained in the following paragraphs:
 
 \begin{figure}
     \centering
-    \includegraphics[scale=0.14]{imgs_tomas/histograms.png}
-    \caption{Spline fitted distance histograms (middle) and von-Mises fitted $\phi$ angle distributions (right) in the red region displayed on the distance map on the left}
-    \label{fig:smooth_fits}
+    \includegraphics[width=\linewidth]{imgs_tomas/momentum.png}
+    \caption{Gradient Descent with Momentum}
+    \label{fig:momentum}
 \end{figure}
 
-We fitted a 3rd-degree spline to the distance histograms and von-Misses distribution \footnote{von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is $\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$ where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
-The $\kappa$ parameter is a called concentration and describes the dispersion. 
-$\mu$ is the mean direction of the distribution \cite{vonmises}} to the torsion angles distributions. 
-These two distributions were also used by the authors of the AlphaFold project \cite{alphafold}.
+\begin{algorithm}[ht]
+\caption{Structure Optimization}
+\label{alg:strucreal_gd}
+\begin{algorithmic}[1]
+\State Initialize $\bm{V}$
+\State Random sample of model parameters $(\phi, \psi)$
+    \Repeat
+        \State Forward pass through the model $\mathcal{G}((\phi, \psi))$
+        \State Calculate Loss
+        \State Backward pass - Calculate Gradients ($\nabla (\phi, \psi)$)
+        \State Normalize gradients
+        \State Update $\bm{V}$: $\bm{V} = \mu \bm{V} - \alpha \nabla (\phi, \psi)$
+        \State Update model parameters: $(\phi, \psi) = (\phi, \psi) + \bm{V}$
+    \Until{i = iterations}
+\end{algorithmic}
+\end{algorithm}
 
-Because there are so many possible protein conformations, the optimization is highly influenced by the initial conditions. 
-The torsion angles can be sampled from the predicted distributions and ideally the optimization process is run several times.  
+In the first step we initialized a vector $\bm{V}$ which we used for implementing momentum. This is a simple idea the reuses gradient from previous iteration, where we no longer move in the direction of the steepest descent, but the direction is altered (dependent on the momentum parameter $\mu$) by adding the vector pointing in the direction of the last gradient. The principle of momentum is visualized on Figure \ref{fig:momentum}.
+
+The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von-Misses distribution to the histograms. von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
+$$\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$$ 
+where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
+The $\kappa$ parameter is called concentration ($\sim 1/\sigma^2$) and describes the dispersion and $\mu$ is the mean direction of the distribution \cite{vonmises}. 
+
+In the next step the algorithm enters a cycle which ends after specified number iterations. In the first step of each iteration the model of protein geometry is created from current torsion angles ($(\phi, \psi)$), which are the parameters of the model, and the coordinates of backbone + C$_\beta$ atoms are computed. Finally a distance matrix is computed between all C$_\beta$ atoms of all residues (C$_\alpha$ for glycine).
+
+We used the distance distributions predicted by the neural network to define a loss function:
+
+\begin{equation}
+     V_{dist}(\mathcal{G}((\phi, \psi))) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
+     \label{eq:dist_pot}
+\end{equation}
+
+which is a simple negative log-likelihood function. In order to calculate the loss at any inter-residue distance, we approximated the distance histograms with a normal distribution (scaled, so that its max probability is the same as for the particular distogram).
+
+The sixth step of the algorithm refers to a computation of the gradients, which thankfully is done automatically by pytorch by calling the \texttt{.backward} method. In order to avoid exploding gradients, we divided the gradients by their standard deviation before updating the parameters. This ensured that the gradients were roughly on the same scale throughout the algorithm interations, while preserving their orientations. In the 8th and 9th step the parameters are updated with the possibility of reusing previous gradients, by setting the momentum parameter $\mu > 0$.
+
+% The entire protein structure defined by the set of two torsion angles was derived by successfully applying the rotational formula (\ref{eq:rotformula}), with the first three atoms arbitrarily placed. The coordinate of C$_\beta$ atom (C$_\alpha$ for glycin) was used to compute the inter-residue distances.
+
+% The protein geometry was implemented in \texttt{pytorch}, which means that the two torsion angles can be used as parameters to the model. \texttt{pytorch} allows for tracking the operations and builds a computational graph, which can then be efficiently backtracked and the gradients with regard to each parameter can be computed. 
+
+% In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids torgether with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure.
+
+% We used this distributions as a guide for the optimization process and defined a loss function:
+
+% \begin{equation}
+%     V(\phi, \psi) = V_{dist}(\mathcal{G}(\phi, \psi)) + V_{torsion}(\phi, \psi)
+% \end{equation}
+
+% where $ V_{dist}(\mathcal{G}(\phi, \psi))$ is a distance potential and $V_{torsion}(\phi, \psi)$ is torsion angle potential. Both of these quantities are essentialy negative log likelihood formulas:
+
+% \begin{equation}
+%      V_{dist}(\mathcal{G}(\phi, \psi)) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
+% \end{equation}
+
+% \begin{equation}
+%     V_{torsion}(\phi, \psi) = -\sum_{i} log[\mathds{P}_{von Mises} (\phi, \psi | S, MSA(S))]
+% \end{equation}
+
+% which compute the log probability of a distribution at a certain value (\cite{alphafold} - supplementary information). In order for this to work properly, one has to work with smooth distributions (ie. derivatives can be calculated).
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\linewidth]{imgs_tomas/norm_histograms.png}
+%     \caption{Spline fitted distance histograms (middle) and von-Mises fitted $\phi$ angle distributions (right) in the red region displayed on the distance map on the left}
+%     \label{fig:smooth_fits}
+% \end{figure}
+
+% We fitted a 3rd-degree spline to the distance histograms and von-Misses distribution \footnote{von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is $\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$ where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
+% The $\kappa$ parameter is a called concentration and describes the dispersion. 
+% $\mu$ is the mean direction of the distribution \cite{vonmises}} to the torsion angles distributions. 
+% These two distributions were also used by the authors of the AlphaFold project \cite{alphafold}.
+
+% Because there are so many possible protein conformations, the optimization is highly influenced by the initial conditions. 
+% The torsion angles can be sampled from the predicted distributions and ideally the optimization process is run several times.  
         
 % \subsection{Simplified case in 2D}
 % Lets imagine the protein as a string of beads, where the beads right next to each other are constant distance away - lets call it $r$. 
@@ -563,10 +617,6 @@ The torsion angles can be sampled from the predicted distributions and ideally t
         
 % \subsection{Full Model}
 
-\subsection{Naive approach}
-pca - eigenvalue decomposition - tomas will explain
 \subsection{Contact maps for struct realization}
 state of the art 3 years ago
 there is an app for pc
-\subsection{LBFGS}
-\subsection{Potentials}
