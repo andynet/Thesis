@@ -9,12 +9,19 @@ In each of the 3 subsections the corresponding part of the diagram will be unrav
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.8\linewidth]{imgs_tomas/Project_pipeline_small.png}
+    \includegraphics[width=\linewidth]{imgs_tomas/Project_pipeline_small.png}
     \caption{Pipeline overview}
     \label{fig:project_pipeline}
 \end{figure}
 
 \section{Primary Sequence to CNN Input}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{imgs_tomas/pipeline_input.png}
+    \caption{Input / Output data generation}
+    \label{fig:pipeline_input}
+\end{figure}
 
 During evolution, we expect that functional parts of proteins are going to be conserved. 
 Furthermore, we expect that two amino acids that are close to each other in the 3D space (not necessarily in the primary sequence) are going to co-evolve as well. 
@@ -63,10 +70,10 @@ The full dataset (version from Sept. 4 2017) consists of 31289 domains.
     
 We decided to exclude segmentated domains from the dataset and also the ones with missing PDB coordinates. 
 This resulted in a set of 19953 domains. 
-Looking at the sizes of homologous superfamilies in Figure \ref{fig:cath}, there are few large ones (like the immunoglobulin family in bottom left with more than 8000 domains) and the rest are relatively small (less than 50). 
+Looking at the sizes of homologous superfamilies in Figure \ref{fig:cath}, there are few large ones (like the immunoglobulin family in the bottom right corner with more than 8000 domains) and the rest are relatively small (less than 50). 
 Our model works woth evolutionary data (MSA - PSSMs/Potts), which means that having a overrepresented family in the data set might introduce some biases that might make the model generalization more difficult. 
 For this reason we decided to impose an exclusion threshold (= 500), where in families with more members we randomly picked "exclusion threshold" of domains out of them. 
-After this filtering, the dataset size reduced to 11014 domains. 
+After this filtering, the dataset size reduced to 11014 domains.
 The distributions of CATH classes can be seen in Figure \ref{fig:cath_filtered}.
     
 \begin{figure}
@@ -83,6 +90,15 @@ The distributions of CATH classes can be seen in Figure \ref{fig:cath_filtered}.
 % The first method which we used - PSIBlast, iteratively constructs Position Specific Scoring Matrices which are used to compute score of candidate sequences (more on PSSMs in the subsection below). If the score exceeds some threshold the candidate sequence is added to the pool, from which the PSSM for the next iteration is computed. In the first iteration the sequences are compared using amino acid substitution matrix (eg. BLOSUM62).  
 
 \subsection{Potts Models}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{imgs_tomas/potts_example.png}
+    \caption{Potts model example for an MSA shown in the upper left corner and the exact parameters calculated. In the bottom is a plot of probabilities for each unique sequence consisting of 3 symbols, calculated using the potts model formula \ref{eq:Potts}}
+    \label{fig:potts_example}
+\end{figure}
+
+The goal of a Potts Model is to simulate probability distribution of every possible combination of symbols in an alphabet
 
 Lets assume that we have a sequence $\boldsymbol{\sigma} = (\sigma_1, \sigma_2, ..., \sigma_L)$, where $L$ is the length of the multiple sequence alignment. 
 Lets further assume that each symbol $\sigma_i$ in the sequence comes from an alphabet $\mathcal{A} = (a_1, a_2, ..., a_Q)$ of size $Q$. 
@@ -139,7 +155,7 @@ Specifically for Potts Model:
 \end{equation}
         
 This loss function is differentiable and so we seek to find its minimum. 
-However, to do so, we need to know the value of the partition function ($\mathcal{Z}$), which is practically incomputable for larger domains. 
+However, to do so, we need to know the value of the partition function ($\mathcal{Z}$), which is practically incomputable for larger domains. To know its exact value, we would need to calculate the value of the potts model for every possible combination of letters in the alphabet for a given length of sequence. 
 Therefore its approximation is required.
         
 Instead of considering the entire space of possible sequences, we can ask about the probability of a certain symbol in a sequence in MSA ($\sigma_r^{(b)}$) knowing the rest of symbols in the sequence ($\bm{\sigma}_{\setminus r}^{(b)}$). 
@@ -261,15 +277,12 @@ In the AlphaFold paper \cite{alphafold}, the authors decided to create train/val
 The rationale behind this is to include all members of each homologous superfamily in either training, validation or test set. 
 This ensures that when evaluating the model performance of a set of proteins, that very similar proteins were not used for training. 
     
-We decided to train our models on a set of 9514 domains. 
-We tried several models and neural network architectures. 
-After picking the most promising ones, we evaluated their performance on a validation set of 1000 domains. 
-We picked the best model and trained on both training and validation data and finally estimated the model performance on a test set of 500 domains. 
-We take this as a final decising metric and error of the model. 
+We decided to train our models on a set of 9394 domains (several had to be excluded due to factors such as low sequence similarity to known structures or inability to converge/slow convergence of the Potts Model). This set of domains was used to train the neural networks and for the validation during the training process.
+The performance of the different models was evaluated on a independent validation set of 1000 domains. For each model we evaluated its inter-residue distance predictions as well as the auxiliary outputs (secondary structure and phi and psi torsion angles).
+The final structures and performance metrics were evaluated on a set of 500 test domains.
     
-Furthermore, to simulate the famous CASP (Critical Assessment of protein Structure Prediction) competition we downloaded the domains used in in CASP13 from 2018. 
-We can be sure that these domains were not used in training because the CATH domain list we downloaded was uploaded in September 2017. 
-We picked 24 domains from the Regular Targets category.
+Furthermore, to simulate the famous CASP competition we downloaded the domains from CASP13 (2018) - regular targets category (T). This allowed us to compare our results with the best teams in the world.
+These domains were not used in training because the CATH domain list we downloaded was uploaded in September 2017. 
     
 \subsection{Input encoding}
 To give a short summary, our input consists of:
@@ -289,42 +302,18 @@ Since we want to take into consideration effects of spatially distant amino acid
         
 \subsubsection{Distance maps}
 The labels used for training were downloaded from the Protein Data Bank (PDB) which offers rich description of many proteins, including their tertiary structure. 
-Most of the structures were determined via X-Ray crystallization technique which is not always able to fully describe the structure. 
-Thus many proteins have many missing atomic coordinates. 
+Most of the structures were determined via X-Ray crystallization technique. However, the method has its limitations, which result in missing atomic coordinates. We decided to filter out the domains with missing data. 
         
-For the reasons of structure realization and residue placement, AlphaFold (and also ProSPr) extracted the C$_\beta$ coordinates of the residues (C$_\alpha$ for glycine) \cite{alphafold}.
-        
+% For the reasons of structure realization and residue placement, AlphaFold (and also ProSPr) extracted the C$_\beta$ coordinates of the residues (C$_\alpha$ for glycine) \cite{alphafold}.
+
 Although distance is a continuous measure, and it would make perfect sense to treat the problem as a regression one, AlphaFold discretized the distances into 64 bins ranging from 2 to 22\AA, with one bin used for distances larger than 22\AA and one bin for missing data. 
-The reason for doing so becomes clearer after understanding how the structure realization (the last step of the entire pipeline) was performed.
-    
-\begin{itemize}
-    \item PDB database
-    \item Discretization of distances
-\end{itemize}
+The reason for doing so becomes clearer after understanding of how the structure realization (the last step of the entire pipeline) was performed.
+
+To make the task slightly simpler for the neural network, we binned the distances into 32 bins (with the first bin - bin 0 used for missing values / padding and last bin for distances larger than 22 \AA).
         
-\subsubsection{Secondary structure and torsion angles}
-        
-The secondary structure was classified into 8 categories suggested by DSSP (Dictionary of Protein Secondary Structure). 
-The categories are shown in table \ref{tab:dssp}.
-        
-\begin{table}[ht]
-    \centering
-    \begin{tabular}{c|c}
-        DSSP code & Secondary Structure\\ 
-        \hline
-        H     & $\alpha$-helix \\
-        B     & Isolated $\beta$-bridge residue \\
-        E     & strand \\
-        G     & 3-10 helix \\
-        I     & $\Gamma$-helix \\
-        T     & Turn \\
-        S     & Bend \\
-        -     & Other 
-    \end{tabular}
-    \caption{DSSP Secondary Structure Classes}
-    \label{tab:dssp}
-\end{table}
-        
+The secondary structure was classified into 8 categories suggested by DSSP (Dictionary of Protein Secondary Structure) \cite{dssp1, dssp2, dssp3}. 
+The categories are shown in table \ref{tab:dssp0}.
+
 On top of the secondary structure classification, the output of the DSSP program also conveniently includes the torsion angles $\phi$ and $\psi$.
         
 \input{2_neural_networks}
@@ -338,13 +327,13 @@ On top of the secondary structure classification, the output of the DSSP program
     \label{fig:backbone}
 \end{figure}
 
-The structure realization step refers to a process of optimizing three dimensional conformation of protein according to some constraints or energy/potential function. If we assume that the bonds between neighboring atoms in the backbone (atoms N, C$_\alpha$ and C) + C$_\beta$ atom is constant as well as the angle between atoms in the same plane (angles N-C$_{\alpha}$-C, C$_{\alpha}$-C-N, C-N-C$_{\alpha}$) then the entire structure can be fully described by a set of three torsion angles $\phi$, $\psi$ and $\omega$.
+The structure realization step refers to a process of optimizing three dimensional conformation of protein according to some constraints or energy/potential function. If we assume that the bond lenth between neighboring atoms in the backbone (atoms N, C$_\alpha$ and C) + C$_\beta$ atom is constant as well as the angle between atoms in the same plane (angles N-C$_{\alpha}$-C, C$_{\alpha}$-C-N, C-N-C$_{\alpha}$) then the entire structure can be fully described by a set of three torsion angles $\phi$, $\psi$ and $\omega$.
 
 This assumption allows us to create a model of protein geometry $\mathcal{G}(\phi, \psi)$ that can be optimized ($\omega$ is almost always 180\degree, and so was treated as a constant). We can use the predicted distance histograms (distograms) together with predicted angle distributions to find a structure which inter-residue distances and torsion angles are as close as possible to the modes of these distributions.
 
-In the following sections we will describe how we tackled the protein geometry problem, together with explanation of torsion angles and a short recap of basic linear algebra operations that were used. In the second part we will describe the optimization process.
+In the following sections we will describe how we tackled the protein geometry problem, together with explanation of torsion angles and how to calculate atom coordinates from them and a short recap of basic linear algebra operations that were used. In the second part we will describe the optimization process.
 
-\subsection{Torsion Angles}
+\subsection{Torsion Angles to Coordinates}
 
 % \begin{figure}
 %     \centering
@@ -385,7 +374,7 @@ These steps will be described in further detail in following section. Figure \re
 
 The cross product $\bm{v} \times \bm{w}$ of two 3D vectors is a vector pointing to a direction perpendicular to both vectors (decided by the right hand rule, where if $\bm{v}$  is represented by a thumb and $\bm{w}$ as index finger, than the direction is given by the middle finger). The size of this vector is equivalent to the area of the parallelogram with sites of sizes $||\bm{v}||$ and $||\bm{w}||$.
 
-Formally the cross-product is a determinant of a special matrix with first column being the unit vectors $u_x$, $u_y$ and $u_z$ of the cartesian coordinate system and the rest are vectors $v$ and $w$:
+Formally the cross-product is a determinant of a special matrix with first column being the unit vectors $u_x$, $u_y$ and $u_z$ of the cartesian coordinate system and the rest are vectors $\bm{v}$ and $\bm{w}$:
 
 $$\bm{v} \times \bm{w} = det
 \left(
@@ -422,9 +411,9 @@ where $\alpha$ is the angle between the two vectors.
     \label{fig:rodrigues3d2d}
 \end{figure}
 
-Lets assume that there is a vector $\bm{v}$ and a vector $\bm{k}$. Our task is to find vector $\bm{v_{rot}}$ which is a rotated version of vector $\bm{v}$ around a line defined by vector $\bm{k}$. Figure \ref{fig:rodrigues3d2d} depicts all the vectors and operations used in the following parapgraphs.
+Lets assume that there is a vector $\bm{v}$ and a vector $\bm{k}$. Our task is to find vector $\bm{v_{rot}}$ which is a rotated version of vector $\bm{v}$ around a line defined by vector $\bm{k}$. Figure \ref{fig:rodrigues3d2d} depicts all the vectors and operations used in the following paragraphs.
 
-The first step is to redefine the coordinate system, in terms of 3 unit vectors: one is vector $\bm{k}$, second is a vector perpendicular to both $\bm{k}$ and $\bm{v}$: $\bm{n} = \frac{\bm{k} \times \bm{v}}{||\bm{k} \times \bm{v}||}$ and third a vector perpendicular to both $\bm{n}$ and $\bm{k}$: $\bm{m} = \bm{n} \times \bm{k}$.
+The first step is to redefine the coordinate system in terms of 3 unit vectors: one is vector $\bm{k}$, second is a vector perpendicular to both $\bm{k}$ and $\bm{v}$: $\bm{n} = \frac{\bm{k} \times \bm{v}}{||\bm{k} \times \bm{v}||}$ and third a vector perpendicular to both $\bm{n}$ and $\bm{k}$: $\bm{m} = \bm{n} \times \bm{k}$.
 
 \begin{enumerate}
     \item "$\bm{k}$ axis"
@@ -457,11 +446,12 @@ All together, the rotational formula is:
     \label{fig:cbeta}
 \end{figure}
 
-To place the C$_{beta}$ we used the rotational formula \ref{eq:rotformula} but the vectors $\bm{v}$ and $\bm{k}$ had to be computed from the coordinates. If vector $\bm{v}_{C_\alpha N}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the N atom and $\bm{v}_{C_\alpha C}$ is a unit vector in the same direction as the bond between the C$_alpha$ atom and the C atom, then the vectors $\bm{v}$ and $\bm{k}$ are:
+To place the C$_{beta}$ we used the rotational formula \ref{eq:rotformula} but the vectors $\bm{v}$ and $\bm{k}$ had to be computed from the coordinates. If vector $\bm{v}_{C_\alpha N}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the N atom and $\bm{v}_{C_\alpha C}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the C atom, then the vectors $\bm{v}$ and $\bm{k}$ are:
 
 $$\bm{v} = \bm{v}_{C_\alpha N} \times  \bm{v}_{C_\alpha C}, ~~ \bm{k} = \frac{\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}}{||\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}||}$$
 
-After applying the rotational formula \ref{eq:rotformula}, scaling the unit vector $\bm{v_rot}$ by the length of the bond and adding the coordinates of the C$_\alpha$ atom the coordinate of the C$_\beta$ can be calculated.
+The angle between a plane defined by vectors $\bm{v}$ and $\bm{k}$ and the vector pointing in the direction of C$_\beta$ atom, should be $~$150\degree, in order for the angles between any combination of 3 atoms (one of which has to be C$_\alpha$) are $~$110\degree.
+After applying the rotational formula \ref{eq:rotformula}, scaling the unit vector $\bm{v_{rot}}$ by the length of the bond and adding the coordinates of the C$_\alpha$ atom the coordinate of the C$_\beta$ can be calculated.
 
 Visual representation of the vectors and the operations can be seen on Figure \ref{fig:cbeta}.
 
@@ -499,7 +489,7 @@ Gradient descent is a widely used method in many machine learning algorithms, an
 
 In the first step we initialized a vector $\bm{V}$ which we used for implementing momentum. This is a simple idea the reuses gradient from previous iteration, where we no longer move in the direction of the steepest descent, but the direction is altered (dependent on the momentum parameter $\mu$) by adding the vector pointing in the direction of the last gradient. The principle of momentum is visualized on Figure \ref{fig:momentum}.
 
-The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von-Misses distribution to the histograms. von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
+The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von-Misses distribution to the histograms. Von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
 $$\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$$ 
 where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
 The $\kappa$ parameter is called concentration ($\sim 1/\sigma^2$) and describes the dispersion and $\mu$ is the mean direction of the distribution \cite{vonmises}. 
@@ -516,6 +506,36 @@ We used the distance distributions predicted by the neural network to define a l
 which is a simple negative log-likelihood function. In order to calculate the loss at any inter-residue distance, we approximated the distance histograms with a normal distribution (scaled, so that its max probability is the same as for the particular distogram).
 
 The sixth step of the algorithm refers to a computation of the gradients, which thankfully is done automatically by pytorch by calling the \texttt{.backward} method. In order to avoid exploding gradients, we divided the gradients by their standard deviation before updating the parameters. This ensured that the gradients were roughly on the same scale throughout the algorithm interations, while preserving their orientations. In the 8th and 9th step the parameters are updated with the possibility of reusing previous gradients, by setting the momentum parameter $\mu > 0$.
+
+\section{Evaluation Metrics}
+
+In order to assess the performance of different models and most importantly, evaluate the closeness of the predictions to the reality a good metric is neccessary. The metrics used in protein folding protocols usually divide into two classes: alignment free and alignment dependent. As the name of the first category suggests, these metrics do not require for the two structures to be aligned while the latter ones does. The advantage of the alignment free metrics is that they are faster to use, however the alignment requiring metrics provide more information. 
+
+We will first describe an alignment free metric we used for comparing and choosing between our models (DlDDT) and then the TM-Score metric, already mentioned in the introduction.
+
+\subsection{(D)lDDT - (Distogram) local Distance Difference Test}
+
+The lDDT metric evaluates the regions of distance matrices capturing local folding patterns. This means that only residues that are closer in reality than some threshold (usually $D_{ij} < 15$\AA) are compared. It is less affected by outliers than RMSD (Root Mean Squared Deviation) and correlates well with the global similarity measures.
+
+The algorithm counts the number of inter-residue distances that are closer to the reality than another imposed threshold - it cycles through 4 different ones: $t \in \{0.5\AA, 1\AA, 2\AA, 4\AA\}$ \cite{lddt}.
+
+The formula for comparing real distance matrix ($D$) and predicted one ($d$) for a domain of length $L$:
+
+$$IDDT = \frac{100}{4} \sum_{t \in \{0.5\AA, 1\AA, 2\AA, 4\AA\}} \frac
+{\sum_{i = 1}^L \sum_{j, |i - j| > 1, D_{ij} < 15} \mathds{1}(|D_{ij} - d_{ij}| < t)}
+{\sum_{i = 1}^L \sum_{j, |i - j| > 1, D_{ij} < 15} 1} $$
+
+However, since our models are essentialy classifiers and we predict a distribution of distances for each $D_{ij}$, Alphafold proposed a modified version of this metric. Instead of the indicator function in numerator it calculates probabilities of bins around the real distance that are closer to it than the treshold $t$. Formally:
+
+\begin{equation}
+DlDDT = \frac{100}{4} \sum_{t \in \{0.5\AA, 1\AA, 2\AA, 4\AA\}} \frac
+{\sum_{i = 1}^L \sum_{j, |i - j| > 1, D_{ij} < 15} \mathds{P}(|D_{ij} - d_{ij}| < t~|~ \mathcal{S}, MSA)}
+{\sum_{i = 1}^L \sum_{j, |i - j| > 1, D_{ij} < 15} 1}
+    \label{eq:dlddt}
+\end{equation}
+
+\subsection{TM-score}
+
 
 % The entire protein structure defined by the set of two torsion angles was derived by successfully applying the rotational formula (\ref{eq:rotformula}), with the first three atoms arbitrarily placed. The coordinate of C$_\beta$ atom (C$_\alpha$ for glycin) was used to compute the inter-residue distances.
 

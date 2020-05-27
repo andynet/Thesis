@@ -13,11 +13,11 @@
 % \end{itemize}
     
 Proteins are one of the essential cellular macromolecules, together with DNA, RNA, sacharides, lipids and others.
-They perform variety functions inside and outside as receptors, enzymes, antibodies, hormones, structural components, transporters, etc. 
+They perform variety functions inside and outside of cells as receptors, enzymes, antibodies, hormones, structural components, transporters, etc. 
 % The basic building blocks of proteins are amino-acids.
 %In nature, most proteins consist of 20 proteogenic amino acids linked together by peptide bonds.
 
-At the ground level protein are composed of a chain amino acids, which are connected through peptide bonds. There are more than thousand of known amino acids occuring in nature, however only 22 of them are involved in protein assembly - proteinogenic (21 in eukaryotes). Twenty of these amino acids are encoded by DNA; their name and one-letter code is shown in Table \ref{tab:aa_codes} \cite{protgenaa}. The sequence of amino acids is called the primary structure of a protein.
+At the ground level proteins are composed of a chain amino acids, which are connected through peptide bonds. There are more than thousand of known amino acids occuring in nature, however only 22 of them are involved in protein assembly - proteinogenic (21 in eukaryotes). Twenty of these amino acids are encoded by DNA; their name and one-letter code is shown in Table \ref{tab:aa_codes} \cite{protgenaa}. The sequence of amino acids is called the primary structure of a protein.
 
 %The peptide bonds form a linearly connected chain of amino-acids also called the primary structure of the protein.
 %This primary structure can be represented in the simple file format, such as FASTA, using single letters to represent particular amino acids.
@@ -42,11 +42,11 @@ At the ground level protein are composed of a chain amino acids, which are conne
 \end{table}
 
 % add something about secondary structure?
-To perform their function proteins fold into a stable three dimensional structures in a very dense and fast changing environment.
+To perform their function proteins fold into stable three dimensional structures in a very dense and fast changing environment.
 %(Figure \ref{fig:cytoplasm} visualizes the cytoplasm and its compactness).
 % because of other forces such as hydrophobicity... 
 This three dimensional structure is also called the tertiary structure of the protein. 
-The secondary structure describes local folds of amino acids. The 3 basic classes are Helices, Sheets and Coils.
+On the lowel level, the secondary structure describes local folds of amino acids, where the 3 basic classes are Helices, Sheets and Coils.
 The very delicate conformation of the protein is crucial for the correct functioning of the cell.
 In rare cases, when the structure is corrupted, it might result in serious diseases such as cystic fibrosis, Parkinson's disease, Huntington's disease, cancer and many others \cite{protein_misfolding_diseases}.
 
@@ -56,7 +56,7 @@ The thermodynamic theory states, that if a denatured protein occurs in an enviro
 % should this be mentioned before, since we already used the term native state?
 This state is also called a "native state" of a protein. 
 Christian B. Anfinsen and his group published a famous paper in 1973, where they managed to denature ("unfold") a protein (bovine pancreatic ribonuclease) with urea - shown in Figure \ref{fig:primarytertiary}a). 
-Afterwards, when they removed urea the protein folded back into the same state as the initial one \cite{anfinsen}. This suggests a link between the primary and tertiary structure which has to be uncovered. Even though the progress in past few decades, prediction of novel amino acid sequences still remains a great challenge, mainly due to the complexity of the problem.% of a protein which has not been uncovered.%, and likely never will be. % why it will never be? 
+Afterwards, when they removed urea the protein folded back into the same state as the initial one \cite{anfinsen}. This suggests a link between the primary and tertiary structure which has to be uncovered. Although the progress in past few decades, the prediction of novel amino acid sequences still remains a great challenge, mainly due to the high complexity of the problem.% of a protein which has not been uncovered.%, and likely never will be. % why it will never be? 
 % ...and because of its complexity, likely never will be.
 % 2 types of denaturation?
     
@@ -69,10 +69,10 @@ Afterwards, when they removed urea the protein folded back into the same state a
 
 Experimental approaches of obtaining the spatial structure include X-ray crystallography and Nuclear Magnetic Resonance (NMR) with the former being responsible for majority of known structures. 
 Since the relative distances between amino acids are in order of \AA ngstroms ($\sim10^{-10}$m), visible light ($\sim10^{-7}$m) can not be used to observe the structures, hence the higher energy X-rays which operate within this region. 
-Major disadvantages of experimental techniques is their high cost ($\sim 10,000\mathdollar-1,000,000\mathdollar$) and low success rate ($\sim 10\%-50\%$) \cite{protcost}.
-The ability to determine tertiary structure of a protein with decent accuracy would help especially in medicine and research, by designing new ones to battle with diseases.
-These are good reasons for trying to build computational methods for determining protein structure and avoid these time and money consuming steps.
-However, due to the vast structure search space, it is impossible to develop an optimization algorithm working on current computers.
+Major disadvantages of experimental techniques are their high cost ($\sim 10,000\mathdollar-1,000,000\mathdollar$) and low success rate ($\sim 10\%-50\%$) \cite{protcost}.
+The ability to determine tertiary structure of a protein with decent accuracy would help especially in medicine and research, by designing new ones to battle with diseases as drug vectors. % prenasac ???
+These are good reasons for trying to develop computational methods for determining protein structure and avoid these time and money consuming steps.
+However, due to the vast structure search space, it is impossible to develop an exact optimization algorithm working on current computers.
 
 To get an idea of how difficult the problem of structure is, lets consider a simple scenario. 
 Lets say, that we have protein of length 100 and each amino acid residue consists of two rotable bonds. For simplicity we will focus on a problem of minimizing an Energy function (Gibbs free energy).
@@ -85,7 +85,6 @@ If we had a computer that can generate one of these unique conformations, comput
 %     \caption{Model of cytoplasm \cite{cytoplasm}}
 %     \label{fig:cytoplasm}
 % \end{figure}
-% (???WHAT ACCURACY IS DECENT???)
 
 \subsection{Amino acids}
 
@@ -103,24 +102,24 @@ If we had a computer that can generate one of these unique conformations, comput
     \label{fig:torsion}
 \end{figure}
 
-Amino acids are organic compounds that are the basic building blocks of proteins. There are 22 amino acids that involved in protein generation, 20 of them that are encoded by DNA are subject to translational processes. Structurally, amino acids are composed of two parts (see Figure \ref{fig:backbone0}):
+Amino acids are organic compounds that are the basic building blocks of proteins. There are 22 amino acids that are involved in protein generation, 20 of them which are encoded by DNA are also subject to translational processes. Structurally, amino acids are composed of two parts (see Figure \ref{fig:backbone0}):
 
 \begin{enumerate}
     \item Backbone
     
-        The Backbone consists of three atoms: Nitrogen atom - N, alpha Carbon - C$_\alpha$ and a Carbon atom - C
+        which consists of three atoms: Nitrogen atom - N, alpha Carbon - C$_\alpha$ and a Carbon atom - C
     \item Residue
         
         The amino acid residue is attached to the backbone through a C$_\beta$ - C$_\alpha$ bond. Residue is a unique molecule that distinguishes amino acids from each other. The only amino acid without a residue is glycin, which instead of the C$_\beta$ has a hydrogen atom  
 \end{enumerate}
 
-In theory, the bonds between backbone atoms (N - C$_\alpha$, C$_\alpha$ - C and C - N) should be of constant length, as well as the angle defined by a unique set of three atoms (N - C$_\alpha$ - C, C$_\alpha$ - C - N and C - N - C$_\alpha$). Even if this is not completely true, the spreads of the distributions are relatively low, which allows to treat them as constant.
+In theory, the bonds between backbone atoms (N - C$_\alpha$, C$_\alpha$ - C and C - N) should be of constant length, as well as the angle defined by a unique set of three consecutive atoms (N - C$_\alpha$ - C, C$_\alpha$ - C - N and C - N - C$_\alpha$). Even if this is not completely true, the spreads of the distributions are relatively low, which allows us to treat them as constants.
 
 This assumption leads to a following consequence: since the distances and angles between consecutive atoms are constant, instead of describing the backbone as a list of coordinates, one can use the so called torsion angles.
 
 Torsion angle, or a dihedral angle, is an angle defined by two intersecting planes. Since there are three atoms in the backbone, we can define three pairs of intersecting planes and thus define the three torsion angles (Figure \ref{fig:torsion}). Knowing the position of three preceding atoms, the torsion angle $\phi$ defines the position of the next C atom, the torsion angle $\psi$ defines the position of the next N atom and finally $\omega$ defines the position of the next C$_\alpha$ atom. The bond between atom C and N in the protein backbone is a peptide bond that behaves similarly to a double bond and is almost always equal to 180\degree~(trans isomerism; 0\degree~for cis configuration). This means that for the construction of protein geometry one only requires two torsion angles: $\phi$ and $\psi$.
 
-Figure \ref{fig:ramachandran} a) shows the distribution of these two angles. Most of the combinations of the two angles are not allowed due to van der Waals clashes. 
+Figure \ref{fig:ramachandran} a) shows the distribution of these two angles. Most of the combinations of the two angles are not allowed due to steric clashes. 
 
 Since secondary structure of a protein is defined as a "repetitive conformation of the residues and, ultimately, repetitive values of $\phi$ and $\psi$", the two basic secondary structure classes can be clearly distinguished in the Ramachandran plot, with $\alpha$ helix having the distribution in lower left quadrant and $\beta$ sheets in the upper left quadrant (see Figure \ref{fig:ramachandran}). Several other classes have been described and their location in the Ramachandran plot can be also localized. These will be described in more detail in next section. 
 
@@ -133,7 +132,7 @@ Since secondary structure of a protein is defined as a "repetitive conformation 
 
 \subsection{Protein Folding}
 
-Protein folding refers to a process of post-translational arrangement of amino acids in the cytoplasm. This purpose of this process is to create a favorable structure for performing a specific task, which is dependent on the type of amino acid residues attached to the backbone. Proteins are created in cells all the time and the same sequence of amino acids should always result in the same folding process. As illustrated in the introduction, the experimental inference of protein structure is both time and money consuming and due to the complexity of the problem, computational method can only create estimates of the structure.
+Protein folding refers to a process of post-translational arrangement of amino acids in the cytoplasm. The purpose of this process is to create a favorable structure for performing a specific task, which is dependent on the type of amino acid residues attached to the backbone. Proteins are created in cells all the time and the same sequence of amino acids should always result in the same folding process. As illustrated in the introduction, the experimental inference of protein structure is both time and money consuming and due to the complexity of the problem, computational method can only create estimates of the structure.
 
 At the lowest level protein are composed of a sequence amino acids. These then create three dimensional folds, from which one can derive local repetitive regions - secondary structure. 
 
@@ -144,7 +143,7 @@ The main driving force of protein folding are the hydrophobic interactions. Ever
 \subsubsection{Secondary structure}
 
 Parts of the folded structure can be classified into either 3 basic local repetitive regions: $\alpha$ helix (Figure \ref{fig:ramachandran} c)), $\beta$ sheet (Figure \ref{fig:ramachandran} b)) and coil or 8 class classification as suggested by Sander and Kabsch in 1983 - DSSP (Dictionary of Protein Secondary Structure) classification \cite{dssp2}. There are also other classification schemes, but DSSP seems to be the one most widely used. 
-The 8 classes of the DSSP algorithm are derived from the atom coordinates (Table \ref{dssp0} shows them).
+The 8 classes of the DSSP algorithm are derived from the atom coordinates (Table \ref{tab:dssp0} shows them).
 
 \begin{table}[ht]
     \centering
@@ -172,30 +171,38 @@ Since the secondary structure elements are stabilized by hydrogen bonds, the alg
 
 The tertiary structure of a domain/protein is the result of folding process. It is a 3 dimensional conformation of densely packed amino acids with free energy as low as possible. As already stated above, this process is driven mainly by the hydrophobic interactions. Another forces that stabilize the structure are the hydrogen bonds (which give rise to the secondary structure elements), Van der Waals forces or disulfide bridges. On top of this, there are several folding factors that aid the process such as chaperons, oxidoreductases, glycan-binding protein and others \cite{principles_of_pf}.
 
-\subsection{Current Approaches to protein folding}
+\subsection{Current Approaches to (ab-initio) protein folding}
 
-Deep learning has been showing great results and potential in variety of applications since $\sim2012$, and the protein folding community noticed this (especially during CASP12 - 2016 and CASP13-2018). However several very good performing methods were developed applying the laws of physics and molecular dynamics or clever search through libraries of fragmented parts of tertiary structures. Due to the large number of unique discovered protein sequences the evolutionary point of view can be applied to the problem by observed conserved pairs of sites. In the last few year the area of quantum computing has been developing and there is a definite potential of using these methods for optimizing protein folds. The principle of these 4 methods will be sketched out in the following paragraphs.
+Deep learning has been showing great results and potential in variety of applications since $\sim2012$, and the protein folding community noticed this (especially during CASP12 - 2016 and CASP13-2018). However several very good performing methods were developed applying the laws of physics and molecular dynamics or clever search through libraries of fragmented parts of tertiary structures. Due to the large number of unique discovered protein sequences the evolutionary point of view can be applied to the problem by observing conserved pairs of sites. In the last few year the area of quantum computing has been developing and there is a definite potential of using these methods for optimizing protein folds. The principle of these 4 methods will be sketched out in the following paragraphs.
 
-\subsubsection{Molecular dynamics}
+\subsubsection{Energy based methods}
 
-eg. rosetta
+As the name suggests, the main goal of these methods is to minimize the free energy of a protein. The premise of the method is to use known physical laws and apply them to the folding without requiring knowledge about other structures. However, although the promising idea, as shown in the introduction the complexity of the problem is just too large, to allow these methods to arrive to exact solutions.
+
+An example of energy minimization method is the CSA protocol \cite{csa} (Conformational Space Annealing), which searches the vast conformational energy landscape. The algorithm simultaneously optimizes several configurations, compares them against each other and saves the one with minimal energy.
 
 \subsubsection{Fragment Assembly}
+
+The principle of fragment assembly is to use fragments of known structure, stick them together and optimize some energy function. Since entire fragments are used, the short-range interactions are not included in the energy function and only long-range are of interest. The final result is highly dependent on the choice of the energy function and the optimization procedure \cite{fragments}.
+
+Pipelines of several teams competing at CASP are based on fragment assembly, eg. I-Tasser developed by Zhang group \cite{zhang} or Rosetta that uses Monte Carlo to assemble the fragments \cite{rosetta}.
 
 \subsubsection{Co-evolutionary features}
 
 % Luckily in this age we have an access to large amount of known structures and many more known primary structures. 
 % Given this and the fact of the rapid rise of machine learning frameworks we can look at the problem from different perspective.
 
-Given a set of primary structures of proteins from different species, we should be able to construct clusters of proteins belonging to the same family. 
+Due to the large increase of sequenced primary protein structures, it is possible to look for pairwise amino acids correlations and use them to model the contacts or distances between residues.
+Given a set of database primary structures of proteins from different species, we should be able to construct clusters of proteins belonging to the same family (homologs). 
 These proteins are likely performing similar functions in different species and should have similar tertiary structures. 
-Given a random amino acid sequence we should be able to find similar sequences and construct the Multiple Sequence Alignment - MSA. 
-In the MSA we should observe linked sites - sites where the correlation of amino acids is far from random. 
+Given a random amino acid sequence we should be able to find similar sequences and construct the Multiple Sequence Alignment - MSA, inside which we should observe linked sites (sites where the correlation of amino acids is far from random). 
 Non-random site linkage might be a result of selective pressure (region of protein responsible for a certain function), a direct contact between two non-convalently linked amino acids or indirect/mediated contact between two amino acids. 
-Thus it is believed that the MSA holds information about the spatial proximity of amino acid pairs and is the main assumption of our thesis report.
-This fact has been proven, where by using the propensities of amino acids at certain position and information about their couplings lead to improved prediction of residue-residue contacts and also distance maps.
+Thus it is believed that the MSA holds information about the spatial proximity of amino acid pairs.
+% This fact has been proven, where by using the propensities of amino acids at certain position and information about their couplings lead to improved prediction of residue-residue contacts and also distance maps.
 
-The infered contact or distances  are then used as a constraint for the final step in the pipeline - structure optimization. AlphaFold developed their own structure realization system by optimizing a custom potential function of a protein geometry derived from distance predictions, torsion angle predictions and a score2-smooth potential to prevent steric clashes (combinations of torsion angles that would result in van-der Waals steric clashes - see Ramachandran plot: Figure \ref{fig:ramachandran}).
+The infered contact or distances  are then used as a constraint for the final step in the pipeline - structure optimization. AlphaFold developed their own structure realization system by optimizing a custom potential function of a protein geometry derived from distance predictions, torsion angle predictions and a score2-smooth potential to prevent steric clashes (foul combinations of torsion angles - see Ramachandran plot: Figure \ref{fig:ramachandran}).
+
+Other best performing teams on CASP (see next section) also adopted this strategy, especially in connection with deep learning, such as Multicom \cite{multicom} or RaptorX \cite{raptorx}
 
 \subsubsection{Quantum Computing}
 
@@ -209,27 +216,32 @@ The infered contact or distances  are then used as a constraint for the final st
     \label{fig:casp}
 \end{figure}
 
-CASP (Critical Assessment of protein Structure Prediction) is a biennial competition that reveals the progress in the field of computational structure prediction. Every two years competitors get access to a set of new protein sequences and are supposed to submit their predictions. The categories of the competition usually include:
+CASP (Critical Assessment of protein Structure Prediction) is a biennial competition that reveals the progress in the field of computational structure prediction. Every two years competitors get access to a set of new protein sequences and are tasked to submit their predictions. The categories of the competition usually include:
 \begin{itemize}
     \item Regular Targets (T)
     
     \begin{itemize}
         \item TBM - Template Based Modelling
+        
         Targets for which at least one structural template can be found with a sequence search method such as PSI-Blast% what exactly is a structural template ???
         \item FM - Free Modelling
+        
         Novel targets that can not rely on already known structures
         \item TBM/FM
+        
         Targets that lie somewhere between the TBM and FM category
     \end{itemize}
     
     \item Refinement Targets (R)
+    
         Measures the ability to refine targets after the first stage modelling phase. After the deadline for prediction of regular targets, the competitors will be given one of the best models for each protein with the task to further optimize/refine the structure.
         
     \item Other
+    
     Assembly("how well current methods can determine domain-domain, subunit-subunit, and protein-protein interactions" \cite{casp}), Accuracy Estimation (assesses "the ability to provide useful accuracy estimates for the overall accuracy of models and at the domain and residue level" \cite{casp}), Contact prediction (introduced on CASP 13 - 2018), Distance prediction (on CASP 14 - 2020), Biological Relevance (CASP 14 - 2020) \cite{casp, casp13}
 \end{itemize}
 
-Figure \ref{fig:casp} a) and b) shows the results of protein predictions in terms of two scores: GDT-TS (Global Distance Test - Total Score) and TM-Score (Template Modelling Score). For each competition we extracted the best scores of best predictions for each domain, took their average and visualized the distribution with a boxplot.
+Figure \ref{fig:casp} a) and b) shows the results of protein predictions in terms of two scores: GDT-TS (Global Distance Test - Total Score) and TM-Score (Template Modelling Score) in the last 6 CASP competitions. For each competition we extracted the best scores of best predictions for each domain, took their average and visualized the distribution with a boxplot.
 Both scores are percentages (with GDT-TS multiplied by 100) and rely on structural alignment. The reason why simple mean squared distance is not favored, is because of its high sensitivity towards outliers. GDT-TS and TM-score account for this. 
 
 For calculation of GDT-TS many different local superpositions are taken to detect similarities between the two structures \cite{gdt1}. Scores below 30\% are considered random structures, scores above 50\% should have correct overall topology and structures with GDT-TS > 75\% are considered as good folds \cite{casp13}.
@@ -240,7 +252,7 @@ During CASP11 the prediction accuracy decreased, which is likely a result of amb
 
 During CASP12 several teams adopted the idea (and showed its potential) of using contact maps to predict tertiary structure. This resulted in great improvement, especially for harder targets in the Free Modelling category. The contact precision increased from $\sim 27\%$ to $~47\%$ \cite{casp12}.
 
-Teams participating in CASP13 pushed this accuracy to $70\%$, mainly due to the use of deep neural networks, with a great dependence on the alignment depth. Another advance came through the prediction of inter-residue distance maps, which were then used as constraints to folding the protein. This idea was adapted by several teams, among which AlphaFold (A7D) predicted 42 domains out of 123, best out of all competitors. Even though this is an impressive result, looking at Figure \ref{fig:casp} c) and d) one can see that performance of other teams was similar to AlphaFolds in terms of the TM-Score and the median rank. Deep learning pipelines of teams such as AlphaFold, RaptorX, were accompanied by teams implementing ideas such as fragment assembly (team Zhang \cite{zhang}), combination of several features extracted from structure from PDB database (Multicom \cite{multicom}) or clever definition of statistical potential and good structure quality assessment (VoroMQA-select \cite{voromqa}).
+Teams participating in CASP13 pushed this accuracy to $70\%$, mainly due to the use of deep neural networks, with a great dependence on the alignment depth. Another advance came through the prediction of inter-residue distance maps, which were then used as constraints to folding the protein. This idea was adapted by several teams, among which AlphaFold (A7D) predicted 42 domains out of 123, best out of all competitors. Even though this is an impressive result, looking at Figure \ref{fig:casp} c) and d) one can see that performance of other teams was similar to AlphaFolds in terms of the TM-Score and the median rank. Deep learning pipelines of teams such as AlphaFold, RaptorX, were accompanied by teams implementing ideas such as fragment assembly (team Zhang \cite{zhang}), combination of several features extracted from structure from PDB database (Multicom \cite{multicom0}) or clever definition of statistical potential and good structure quality assessment (VoroMQA-select \cite{voromqa}).
 
 The approach taken by AlphaFold relies heavily on the number of found homologs in sequence databases, which might be a reason for the large spread of median ranks in Figure \ref{fig:casp}.
 

@@ -22,7 +22,7 @@ Finally, we unite these theoretical concepts and reveal how we used them for the
 
 
 \subsection{The basic architecture of Neural Networks}
-Artificial neural networks are machine learning models first discovered in 1958 by psychologist Frank Rosenblatt.
+Artificial neural networks are machine learning models first discovered in 1958 by psychologist Frank Rosenblatt. % invented, not discovered
 They were heavily inspired by the human nervous system.
 The nervous system is composed of small units, called neurons.
 These neurons are connected via specialized connections called synapses.
@@ -91,10 +91,11 @@ The function modelled by this new network is of the form
 
 where $a$ is the activation function and $W_l, l \in {1, 2}$ are the weights of the connections corresponding to transition from layer $l-1$ to layer $l$.
 
-There is many possibilities for the activation function and the choice of it usually depends on the particular goal in mind.
+There are many possibilities for the activation function and the choice of it usually depends on the particular goal in mind.
 % from here it feels sloppy
 Some of the most commonly used activation functions are:
 
+% insert picture - functions + their derivatives
 \begin{itemize}
     \item $\text{Identity}(x) = x$
     \item $\text{Tanh}(x) = \frac{\exp(x) - \exp(-x)}{\exp(x) + \exp(-x)}$
@@ -177,7 +178,7 @@ It is defined by equation \ref{eq:MSE}.
 
 The Negative Log-Likelihood is used for classification purposes with C classes.
 It is defined by equation\ref{eq:NLL}.
-
+% NLL = -log(p), nie? toto je trochu matuce, aj s tym MSE hore
 \begin{equation}
     \ell(\hat{Y}, Y) = \sum_{n=1}^N \frac{1}{\sum_{n=1}^N w_{Y_n}} l_n,
     l_n = - w_{y_n} x_{n,y_n},
@@ -213,7 +214,7 @@ This training process is also referred as Gradient Descent and we provide the al
 
 Although this algorithm provides a solid basis to analyze the learning process, it is usually too slow to be used in practice.
 This is mainly caused by the need to calculate the predictions across all the datapoints in the training dataset.
-Since nowadays the training datasets tends to be very big a modification to this algorithm was proposed.
+Since nowadays the training datasets tend to be very big, a modification to this algorithm was proposed.
 Instead of using all the datapoints from training dataset, the error is just estimated with one point.
 This is what is called the Stochastic Gradient Descent and it was one of the most significant steps in adopting the neural networks in a broad range of tasks.
 
@@ -277,6 +278,7 @@ Convolutional neural networks are using similar principles to extract and encode
 From the computational point of view, CNNs are neural networks heavily regularized by the number and location of connections.
 They perform exceptionally well on image classification tasks, recently achieved human-level performance on ImageNet dataset.
 The ImageNet dataset is the benchmark dataset used in ImageNet Large Scale Visual Recognition Competition (ILSVRC), which is annual competition hugely contributing to the development and application of neural networks.
+% imagenet uz nebezi. Zacne sa prechadzat z 2d na 3d - kukni objectnet
 % add:
 % different architectures, with just minor changes
 % some notable winners - LeNet, AlexNet, 
@@ -299,6 +301,7 @@ Afterwards, we will shift the Kernel by one pixel down and start the same proces
 This is repeated until we slide through all possible rows and columns of the Image grid.
 The convolution operation is visualized in Figure \ref{fig:convolution}.
 
+% tento obrazok je zbytocny podla mna. nedodava viac informacie ako ten pod nim, ktory este zahrnuje aj padding a stride. a zabera vela miesta
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_andy/convolution.png}
@@ -433,21 +436,61 @@ This is done using multiple kernels where each kernel produces a single map of s
 For example, we can have one kernel which is able to detect edges of the objects in the image and another kernel which is able to detect texture of the objects.
 To incorporate these options, PyTorch framework allows to initialize the convolution layers with parameters $\text{in\_channels}$, $\text{out\_channels}$, $\text{kernel\_size}$, $\text{padding}$, $\text{stride}$, $\text{dilation}$.
 
-
-
-
-
-
-
-
-
-
 % 1X1 convolution
+One special convolution operation is noteworthy at this point, commonly referred to as $1 \times 1$ convolution.
+This convolution uses kernel of size $1 \times 1$ and therefore would not do anything significant in the settings with one input map and one output map.
+However, in the settings with multiple input and output channels, this operation can be used to change the number of maps representing our data.
+
+% groups
+Another useful modification to the convolution operation is using $\text{groups}$.
+By default, this parameter is usually set to $1$, which means that only one group is created from all input channels, to create an output map.
+By, for example, setting this parameter to $2$, $2$ groups would be created from input channels.
+First half of the input channels would create one map and the second half of the input channels would create the second one.
+If the groups parameter is set to the number of input layers, each input layer is used separately to create one output layer.
+This setting is mainly useful in combination with $1 \times 1$ convolutions, where it can reduce the number of parameters significantly. 
 
 % reduction of the parameters using the 1X1 convolution
+To illustrate the reduction of parameters, let us imagine that the input has $N$ channels and the output has $M$ channels.
+To perform a classical convolution with kernel size $K \times K$ we would need $K \cdot K \cdot N \cdot M$ parameters.
+We can reduce this number, by first applying $1 \times 1$ convolution, followed by convolution with $\text{groups} = M$.
+This way, the number of needed parameters is $1 \cdot 1 \cdot N \cdot M + K \cdot K \cdot M$.
+
+For example, performing $3 \times 3$ convolution with $3$ input channels and $2$ output channels would require 54 parameters with classical convolution and only 24 parameters using the $1 \times 1$ followed by grouped convolution.
+
+Of course, these two operations are not identical, but it can be argued they serve the same intended purpose.
+The intended purpose of the depth in basic convolution is to use the information from multiple channels.
+In the reduced approach, this is delegated to the $1 \times 1$ convolution.
+The kernel size greater than one in basic approach is used to capture the locality of the features.
+In the reduced approach, this responsibility is passed on the grouped convolution. 
 
 \subsection{Residual Neural Networks}
+A great portion of improvement of accuracy of the recent neural network models is based on the increased computational power, availability of huge data sets and changes in the architecture of the models.
+The prevalent trend is to use deeper neural networks, because they tend to perform better in practice.
+This can be intuitively explained by the hierarchical nature of the features extracted.
+
+Unfortunately, the increased depth of the model is also usually linked with the problems of vanishing and exploding gradients.
+To overcome this issues a new architecture was proposed - residual neural network.
+This architecture introduces skip connections between the layers. 
+The main idea of these skip connections is to let the network decide of the depth that is needed to model a specific feature.
+To show why this is needed let us consider an image containing two object with very different complexity - for instance a human face as an object of relatively high complexity and a simple geometrical shape such as triangle as an object of relatively low complexity.
+To model the human face well, it is likely that a deeper neural network would be needed due to the number of small details which we need to capture.
+On the contrary, to model a simple triangular shape a shallow network is likely to be sufficient.
+In residual networks the skip connections allow to model both regions of the image using the same network.
+In the case of face modelling the network will use the deep layers to capture the details and in the case of the triangle only a first few layers will be used and most other layers will be skipped using the skip connections.
+
+The skip connections are realized through addition of the identity to the output of a particular layer.
+This is visualized in the Figure \ref{fig:skip_connection}.
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{imgs_andy/skip_connection.png}
+    \caption{Skip connection}
+    \label{fig:skip_connection}
+\end{figure}
+These skip connections provide an alternative way for the flow of gradient.
+The shortest path, the path using most skips, is learning the most important features of the input.
+The longer paths can then be intuitively viewed as a residual contributions \cite{he2016deep}.
+For this reason, residual networks tend to be more robust to the choice of depth of the model.
     
-\subsection{AlphaFold}
+% \subsection{AlphaFold}
 
 \newpage

@@ -1,33 +1,61 @@
 \chapter{Results and Discussion}
+In this chapter, we describe and discuss the results of this project.
+In first section, we present implementation of the pipeline allowing us to transform the raw protein sequences from FASTA format into the input format of the neural network.
+Then, in the second section, we reveal the networks used to predict the distograms of the proteins.
+We also discuss the experiments done to confirm the correctness of our implementations and compare different architectures.
+The last section is dedicated to constructing the 3D structure from these predicted distograms.
 
 \section{Pipeline}
-\subsection{Input}
-\subsection{Distances}
-\subsection{Structure Realization}
-\subsection{Evaluation and Visualization}
+The pipeline was constructed to formalize and automatize the process of data preparation for the neural networks.
+It was written in Snakemake workflow management system \cite{koster2012snakemake}, which is highly popular in the bioinformatics field with approximately 3 new citations each week.
+The workflows consists of rules, which define the data dependency in form of rule input files, rule output files and the script, which needs to be executed to get from input to output. 
+This definitions make using of Snakemake very convenient.
+The rules are defined as a subset of YAML, extended by the option to run python code directly.
+This makes them easily readable by humans.
+The structuring of the workflow allows seamless scalability to server environments and parallelization to multiple cluster nodes and multiple cores.
+This capability was very crucial for this project due to the amount of data available.
+Furthermore, Snakemake automatically checks for completed rules, which is in turn used to run only the rules needed for the defined target.
+It also check the exit code of the scripts and informs user if there is an error during the execution and therefore decreases a chance of working with faulty data to the minimum.
+Finally, conda \cite{conda}, the package management system, is nicely integrated into Snakemake, which simplifies the installation of most packages and bioinformatics tools needed during the analysis.
+It is also possible to fix package versions used during the analysis, which hugely improves reproducibility.
+Next, we present the main steps in the pipeline.
+The complete pipeline can be found on our GitHub repository \cite{github}.
 
-\begin{itemize}
-    \item TM score, GDT\_TS
-\end{itemize}
+\subsection{PSI-BLAST}
+The first step in the pipeline was the Position-Specific Iterated BLAST \cite{altschul1997gapped}.
+It is a variation of the BLAST algorithm focused on protein search
+
+% https://www.youtube.com/watch?v=IXuzKjCm0ME seems like a good source
+% for blast part
+% BLAST is a heuristic that attempts to optimize a specific similarity measure.
+% The original BLAST program seeks short word pairs whose aligned score is at least T. Each such ‘hit’ is then extended, to test whether it is contained within a high-scoring alignment. For the default T value, this extension step consumes most of the processing time. 
+
+\subsection{HHblits}
+% fasta input -> msa out
+\cite{remmert2012hhblits}
+
+\subsection{plmc}
+% msa out -> potts
+% L-BFGS 
+% 500 iteration
+\cite{plmc}
+
+\subsection{input creation}
+
+
+%\subsection{Distances}
+%\subsection{Structure Realization}
+
+%\subsection{Evaluation and Visualization}
+
+%\begin{itemize}
+%    \item TM score, GDT\_TS
+%\end{itemize}
     
-\section{Distance predictions}
-\subsection{Perceptron}
-\subsection{Simple CNN (LeNet)}
-\subsection{AlphaFold}
-\subsection{Overtraining of the model}
-We performed an experiment, to observe how our model behaves with different kinds of data.
-First, we initialized the model parameters randomly.
-Our primary expectation was that, if we use also randomly generated input and no training, the output will look very randomly as well.
-% This expectation is visualized in the Figure (\ref{fig:in_out_dep1}).
-    
-% \begin{figure}
-%     \centering
-%     \includegraphics{}
-%     \caption{Caption}
-%     \label{fig:in_out_dep1}
-% \end{figure}
-    
-Surprisingly, this was not the case in the experiment.
+\section{Inter-residue distance modelling}
+
+\subsection{Neural Networks}
+% architectures (convnet, Alphafold, Inception), training, auxiliary losses, ...
 
 \begin{figure}
     \centering
@@ -43,25 +71,58 @@ AlphaFold\_T = 10,745,464
 Inception = 1,495,416
 ConvNet = 6,654,328
 
-\begin{itemize}
-    \item Architecture (Blocks, dilated convolutions, groups)
-    \item Number of parameters
-    \item Projections (Up, Down) - Conv1x1
-    \item Auxiliary losses
-\end{itemize}
+\subsection{Cropping}
+
+\subsection{Evaluation}
+
+% distance maps (loss, lddt), Q3 ss accuracy, 
+
+
+% \subsection{Overtraining of the model}
+% We performed an experiment, to observe how our model behaves with different kinds of data.
+% First, we initialized the model parameters randomly.
+% Our primary expectation was that, if we use also randomly generated input and no training, the output will look very randomly as well.
+% % This expectation is visualized in the Figure (\ref{fig:in_out_dep1}).
+    
+% % \begin{figure}
+% %     \centering
+% %     \includegraphics{}
+% %     \caption{Caption}
+% %     \label{fig:in_out_dep1}
+% % \end{figure}
+    
+% Surprisingly, this was not the case in the experiment.
+
+% \begin{itemize}
+%     \item Architecture (Blocks, dilated convolutions, groups)
+%     \item Number of parameters
+%     \item Projections (Up, Down) - Conv1x1
+%     \item Auxiliary losses
+% \end{itemize}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{imgs_andy/error_distribution_200430m93s4000.png}
-    \caption{Caption}
+    \includegraphics[width=\linewidth]{imgs_andy/error_distribution_test_set_ensemble_simetrized.png}
+    \caption{Error distribution}
     \label{fig:error_dist}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{imgs_andy/error_length_200430m93s4000.png}
+    \includegraphics[width=\linewidth]{imgs_andy/error_length_test_set_ensemble_simetrized.png}
     \caption{Error - length relationship}
     \label{fig:err_len}
+\end{figure}
+
+\begin{figure}
+    \centering
+    % \includegraphics[width=0.5\linewidth]{imgs_andy/distograms/test_vis_sim_best_4i4tE01_7.13.png}
+    \includegraphics[width=0.75\linewidth]{imgs_andy/distograms/test_vis_sim_5perc_1vmgA00_20.42.png}
+    \includegraphics[width=0.75\linewidth]{imgs_andy/distograms/test_vis_sim_median_4mveA00_28.69.png}
+    \includegraphics[width=0.75\linewidth]{imgs_andy/distograms/test_vis_sim_95perc_2l1iA00_39.11.png}
+    % \includegraphics[width=0.5\linewidth]{imgs_andy/distograms/test_vis_sim_worst_3m4yA01_71.41.png}
+    \caption{Comparison of ground truth and predicted distograms. We selected three proteins based on the calculated error made in their predictions. First row is a very good prediction of a protein 1vmgA00 with measured error 20.42. Only 5\% of the distograms achieved better accuracy. Second row is a prediction of protein 4mveA00 with median error amongst the test set. Third row is a prediction of protein 2l1iA00. 95\% of the errors from test set achieved better score. In all cases, the ground truth is displayed on the left and the predicted distograms on the right.}
+    \label{fig:distograms}
 \end{figure}
 
 \begin{figure}
@@ -69,27 +130,6 @@ ConvNet = 6,654,328
     \includegraphics[width=\linewidth]{imgs_andy/139lA00_real_pred_3D_v2.png}
     \caption{Comparison of real vs. predicted 3D structure}
     \label{fig:real_pred}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_andy/2fxmB00_best_prediction.png}
-    \caption{Best prediction}
-    \label{fig:best}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_andy/1mdbA01_median_prediction.png}
-    \caption{Median prediction}
-    \label{fig:median}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_andy/3kitJ00_worst_prediction.png}
-    \caption{Worst prediction}
-    \label{fig:worst}
 \end{figure}
 
 \section{Structure Realization}
@@ -124,12 +164,13 @@ $$momentum = [0.1, 0.3, 0.5, 0.7, 0.9]$$
 
 \subsection{Inter-residue Contacts + Secondary structure based Structure Realization}
 
+\subsection{Evaluation}
 
 \section{Comparison with other methods}
 \subsection{Distances}
 \subsection{Structures}
 
-\section{What next?}
+\section{Potential improvements}
 
 \subsection{Regarding Input Data}
 what to do when the protein does not have enough similar sequences in the database?
