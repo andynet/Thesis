@@ -1,11 +1,11 @@
 \chapter{Materials and Methods}
 
-In this section we describe the steps required to get from a primary protein sequence to its tertiary structure.
-It begins with the description of the input and the motivation for using it. 
-Second part focuses on the model choices and mainly describes the convolutional neural network. 
-The last section focuses on the structure realization. 
-A graphical overview of the entire pipeline is showed in Figure \ref{fig:project_pipeline}. 
-In each of the 3 subsections the corresponding part of the diagram will be unraveled to accompany the verbal descriptions.
+In this section, we describe the steps required to get from a primary protein sequence to its tertiary structure.
+It begins with the description of the input. 
+The second part focuses on the model choices and mainly describes the convolutional neural network. 
+The last section focuses on structure realization. 
+A graphical overview of the entire pipeline is shown in Figure \ref{fig:project_pipeline}. 
+In each of the 3 subsections, the corresponding part of the diagram will be unravelled to accompany the verbal descriptions.
 
 \begin{figure}[ht]
     \centering
@@ -25,7 +25,8 @@ In each of the 3 subsections the corresponding part of the diagram will be unrav
 
 During evolution, we expect that functional parts of proteins are going to be conserved. 
 Furthermore, we expect that two amino acids that are close to each other in the 3D space (not necessarily in the primary sequence) are going to co-evolve as well. 
-This co-evolution of spatially proximal amino acids should be reflected in the Multiple Sequence Alignment (MSA) of a protein. 
+This co-evolution of spatially proximal amino acids should be reflected in the Multiple Sequence Alignment (MSA) of a protein.
+
 In order to generate a MSA for a selected domain, one has to first find proteins that share some ancestry with it (homologs), which is done by searching through database of sequences and picking proteins that have certain sequence similarity. 
 From these sequences we can generate the MSA.
     
@@ -33,7 +34,7 @@ From the MSA we can calculate the propensities of amino acids at each position o
 To model the interaction we can use the Direct Coupling Analysis (Potts model).
     
 This section is going to be organised as follows. 
-We are first going to explain how to search for similar proteins and construct the MSA using the HHblits tool. 
+We are first going to explain how to search for similar proteins and construct the MSA. 
 The second part will focus on the MSA summary statistics such as PSSMs and Potts Models. 
 In the last part we will discuss the encoding of the input, so that it is ready for use in the convolutional neural network.
     
