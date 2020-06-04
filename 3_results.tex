@@ -26,9 +26,11 @@ In the next subsection we describe the main architecture of the network used for
     \label{fig:outputs}
 \end{figure}
 
+Before diving to the specifics of each module, we have to explain the overall/general architecture shared between the models (see Figure \ref{fig:architectures}a)). The first crucial thing to keep in mind, is to ensure that the dimensionality of the input does not change throughout the network, since our labels were 2D (binned) distance maps. This means that no pooling operations are allowed, only convolutions without changing the dimensionality. The layers inside the networks are thus essentially only of three types: convolutional (1x1, 3x3, 5x5, 64x1, dilated, ...), Batch norm and Elu/Relu layers. The only difference between the individual modules is in the number of these layers and their arrangement.
+
 In order for the input features to be roughly on the same scale, the first layer of the network is a Batch normalization one. As the number of channels in the input was 569, the second layer decreases this number by applying the 1x1 convolution. Its output is then fed through a series of modules (described more thoroughly in later paragraphs).
 
-The end of the network branches into two output heads: distogram head, which decreases the number of channels to 32 and auxiliary head that applies two convolution operations, to arrive at 2D input with 84 channels (9 channels for secondary structure, 37 channels for phi angle and 37 channels for psi angle) - see Figure \ref{outputs}. The "$aux_j$" output was taken directly after applying the 64x1 convolution and $aux_i$ output was taken as a transpose of the same layer. In a way this created two auxiliary heads with shared weights. The entire architecture together with the modules described below is shown on Figure \ref{fig:architectures}.
+The end of the network branches into two output heads: distogram head, which decreases the number of channels to 32 and auxiliary head that applies two convolution operations, to arrive at 2D input with 84 channels (9 channels for secondary structure, 37 channels for phi angle and 37 channels for psi angle) - see Figure \ref{fig:outputs}. The "$aux_j$" output was taken directly after applying the 64x1 convolution and $aux_i$ output was taken as a transpose of the same layer. In a way this created two auxiliary heads with shared weights. The entire architecture together with the modules described below is shown on Figure \ref{fig:architectures}.
 
 \begin{figure}
     \centering
@@ -45,13 +47,13 @@ The number of channels inside the network was fixed at 128 and the activation fu
 
 \subsubsection{AlphaFold}
 
-For notational purposes, we are going to distinguish three features of the network: the AlphaFold block, the Alphafold Module (corresponding to the Module depicted on Figure \ref{fig:architectures}a) and AlphaFold network).
+For notational purposes, we are going to distinguish three features of the network: the AlphaFold block, the Alphafold Module and AlphaFold network.
 
 The main feature of the alphafold resnet block (depicted on Figure \ref{fig:architectures}b)), are the dilated 3x3 convolutions. It begins with a Batch norm layer, followed by a 1x1 convolution layer decreasing the number of channels to one half. After applying another batch norm layer comes the dilated 3x3 convolution. The size of the dilation was picked from a list: \{1, 2, 4, 8\}. The block is concluded with a Batch norm layer followed project up layer, that restores the number of channels so that they can be added to the input. The activation function used between the layer was elu.
 
 The Alphafold module consisted of 4 Alphafold blocks cycling through 4 different dilations. We built two versions of AlphaFold network: one with 40 modules with number of channels = 128 and applying 3x3 convolutions with groups = 128, and another one with first 4 modules having 216 channels and then 32 modules with 128 channels applying convolutions with groups=1. In further text we will refer to the first network as Alphafold and second as Alphafold\_ZP (due to the cropping scheme strategy involving Zero Padding). 
 
-All in all, the number of parameters in Alphafold was 3,639,928 and in ALphafold\_ZP 10,745,464. This difference is mainly the result of applying 3x3 convolutions in the blocks channel wise ($\Longleftrightarrow$ groups = channels).
+All in all, the number of parameters in Alphafold was 3,639,928 and in Alphafold\_ZP 10,745,464. This difference is mainly the result of applying 3x3 convolutions in the blocks channel wise ($\Longleftrightarrow$ groups = channels).
 
 \subsubsection{Inception}
 
@@ -68,24 +70,39 @@ The idea behind this module is to let the network to pick a "path" depending on 
 \subsection{Training Strategy}
 
 \subsubsection{Cropping}
-The cropping refers to a process in which we sliced a region of the size $\text{crop\_size} \times \text{crop\_size}$ from the input of the size $L \times L$.
-The sliced region was then used to train the neural network.
-This process served multiple purposes.
 
-First, it allowed to use the network across all the proteins with differing lengths.
-Although the convolution operation can be used on the input of different sizes, one of the last steps in our networks was to predict auxiliary losses of secondary structure and torsion angles.
-This meant to reduce the multiple 2D maps into multiple 1D maps.
-For this purpose, we used the convolution with a kernel of size $1 \times \text{crop\_size}$.
+The cropping refers to a process in which % we sliced a region of the size
+a sliced region of shape $\text{crop\_size} \times \text{crop\_size}$ is extracted from the input of size $L \times L$. In our pipeline (as was done in AlphaFold) we used crops of size 64x64.
+These crops were then used for neural network training, as well as for predicting novel data. This step was necessary and beneficial for following reasons: 
+
+%The sliced region was then used to train the neural network.
+%This process served multiple purposes.
+\begin{enumerate}
+    \item Independence from input size ($\Leftrightarrow$ domain length)
+    % It allowed us to use the network %across all proteins with differing lengths. 
+    % without caring about the size of the input ($\Leftrightarrow$ domain length).
+
+Although the convolution operation can be used on input of different sizes, one of the last steps in our networks was to predict auxiliary losses of secondary structure and torsion angles.
+For this, we needed to reduce the multiple 2D maps into 1D maps, which was achieved by applying convolution with kernel size $1 \times \text{crop\_size}$.
+%This meant to reduce the multiple 2D maps into multiple 1D maps.
+%For this purpose, we used the convolution with a kernel of size $1 \times \text{crop\_size}$.
 If it were not for the unified size of the input, we would need to use kernel size of $1 \times L$, which is different for all proteins and therefore we would not be able to reuse the same parameters for auxiliary loss prediction.
 
-Second, it served as a data augmentation.
+    \item Data augmentation
+    
+During every epoch, the crops were randomly offsetted and then fed to the network. This means that for every iteration the network needs to predict certain region with slightly different input data at hand, which forces it to generalize better.
 % add some description why?
 
-Third, it decreased memory load and the time consumption of the training process.
+    \item Memory load and the time consumption decrease during training
+    
+    
+
 % add some description why?
 % add more advantages?
+\end{enumerate}
 
-During the training, we experimented with two cropping schemes.
+%During the training, 
+We experimented with two cropping schemes.
 
 In the first cropping scheme, we only considered the inner crops.
 First we selected offsets $O_x, O_y$ for the x-axis and for the y-axis respectively. 
@@ -100,6 +117,8 @@ Then, we shifted the crops along the y-axis, so the y offset was $O_y + 1 \cdot 
 We continued this cropping process until we covered all inner crops of the longest domain.
 This cropping scheme is visualized in Figure \ref{fig:cropping} a).
 
+The second cropping scheme (visualized on Figure \ref{fig:cropping} b)) - also used by Alphafold, allows the crops to go "outside" of the input. The excess regions are represented with number 0 together with a label of the same number. The zero padding never exceeded length of 32, meaning that at least 32x32 region of the input was always included inside of the crop (the shape of crops was 64x64). The crops were non-overlapping and some degree of freedom (dependent on the size of the input) regarding the offset of the entire crop map (orange squares on Figure \ref{fig:cropping} b)) allowed us to feed the network with diverse data while training. The zero padding also allowed us to train on domain shorter than 64 residues, which is not possible with the first cropping scheme.
+
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/cropping_schemes.png}
@@ -109,9 +128,9 @@ This cropping scheme is visualized in Figure \ref{fig:cropping} a).
 
 \subsubsection{Training}
 
-The training script involved 3 stages: loading input data, cropping and applying gradient descent steps.
+The training involved 3 stages: loading input data, cropping and applying gradient descent steps.
 
-It was not possible load all data in memory (the occupied space $\approx$ 1TB), so the data loading and training was performed on smaller chunks of the data. We loaded the data in parallel, which increased the training speed substantially.
+It was not possible load all data in memory (the occupied space $\approx$ 1TB), so the data loading and training was performed on smaller chunks of the data. We loaded the input tensors in parallel, which increased the training speed substantially.
 
 Then a bank of crops of sizes 64x64x569 was created which was fed to the network in batches of size 8. We used weighted negative log likelihood as the loss function to give more importance to the distance predictions than auxiliary losses. Formally:
 
@@ -133,62 +152,41 @@ We saved intermediate models (after each epoch) and picked the one with lowest o
     \label{fig:models_lddt}
 \end{figure}
 
-% distance maps (loss, lddt), Q3 ss accuracy, 
+The model choice was performed on a validation set of 1000 domains, which were not used in training. Each domain was predicted by each model and its DlDDT score was calculated from the distograms (see Equation \ref{eq:dlddt}). The Figure \ref{fig:models_lddt} shows the results. 
 
-
-% \subsection{Overtraining of the model}
-% We performed an experiment, to observe how our model behaves with different kinds of data.
-% First, we initialized the model parameters randomly.
-% Our primary expectation was that, if we use also randomly generated input and no training, the output will look very randomly as well.
-% % This expectation is visualized in the Figure (\ref{fig:in_out_dep1}).
-    
-% % \begin{figure}
-% %     \centering
-% %     \includegraphics{}
-% %     \caption{Caption}
-% %     \label{fig:in_out_dep1}
-% % \end{figure}
-    
-% Surprisingly, this was not the case in the experiment.
-
-% \begin{itemize}
-%     \item Architecture (Blocks, dilated convolutions, groups)
-%     \item Number of parameters
-%     \item Projections (Up, Down) - Conv1x1
-%     \item Auxiliary losses
-% \end{itemize}
+Our initial idea was to weigh the models according to these scores. However, since they were highly correlated, we abandoned the plan and only picked the best model. The AlphaFold (with cropping scheme number 1) performed best of all models, while the Inception architecture leads the Zero-Padding group ($\Leftrightarrow$ cropping scheme number 2). Thus, the domains larger than 63 residues were predicted with AlphaFold architecture (since first cropping scheme (Figure \ref{fig:cropping}a)) does not work with domains smaller than 64 residues), and the rest with Inception\_ZP. 
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{imgs_andy/error_distribution_test_set_ensemble_simetrized.png}
-    \caption{Error distribution}
-    \label{fig:error_dist}
+    \includegraphics[width=\linewidth]{imgs_tomas/test_losses_distributions.png}
+    \caption{Test loss against domain lenth together with its distributions. The NLL loss is a weighted function composed of distogram loss and auxiliary losses - see Equation \ref{eq:NLLloss}. The grey line shows the boundary between random and non-random predictions}
+    \label{fig:test_losses}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_andy/error_length_test_set_ensemble_simetrized.png}
-    \caption{Error - length relationship}
-    \label{fig:err_len}
-\end{figure}
+For a final evaluation of the model performance we used two test sets: one coming from the CATH database and then 13 domains from CASP13. Figure \ref{fig:test_losses} shows the distribution of overall losses for all CATH test domains together with domain length relationship. 
+
+We can safely conclude that our models were able to extract important features from the input and generate non-random outputs. The boundary between the random and non-random model can be calculated from Equation \ref{eq:NLLloss}:
+
+$$- 10~log(1/32) + 2~log(1/9) + 4~log(1 / 37) \approx 53.45$$
 
 \begin{figure}
     \centering
-    % \includegraphics[width=0.5\linewidth]{imgs_andy/distograms/test_vis_sim_best_4i4tE01_7.13.png}
-    % \includegraphics[width=0.75\linewidth]{imgs_andy/distograms/test_vis_sim_5perc_1vmgA00_20.42.png}
-    % \includegraphics[width=0.75\linewidth]{imgs_andy/distograms/test_vis_sim_median_4mveA00_28.69.png}
-    % \includegraphics[width=0.75\linewidth]{imgs_andy/distograms/test_vis_sim_95perc_2l1iA00_39.11.png}
-    % \includegraphics[width=0.5\linewidth]{imgs_andy/distograms/test_vis_sim_worst_3m4yA01_71.41.png}
     \includegraphics[width=\linewidth]{imgs_andy/distograms/distance_maps_test_structures.png}
     \caption{Comparison of ground truth and predicted distograms. We selected three proteins based on the calculated error made in their predictions. First row is a very good prediction of a protein 1vmgA00 with measured error 20.42. Only 5\% of the distograms achieved better accuracy. Second row is a prediction of protein 4mveA00 with median error amongst the test set. Third row is a prediction of protein 2l1iA00. 95\% of the errors from test set achieved better score. In all cases, the ground truth is displayed on the left and the predicted distograms on the right.}
     \label{fig:distograms}
 \end{figure}
 
+This can be also seen on the predicted distance maps shown in Figure \ref{fig:distograms} where we picked three domains based on their loss. The columns show the real distance maps, prediction derived from Neural network and induced maps from folded 3D structures using 3rd party program CONFOLD2 and our own Gradient Descent based structure optimization. The first domain respresents the fifth percentile of the loss distribution (only 5\% of domains had lower loss), middle is a median prediction and bottom represents the 95th percentile.
+
+The first interesting point regarding the results is, that the prediction loss does not get worse for longer domains. This means, that the network was able to predict different regions of the distance maps, both on and off diagonal.
+
+The second fact, although not so obvious as the first one, is suggested by the predicted and real distance maps in Figure \ref{fig:distograms}. Although not surprising, the network had troubles predicting finer features of the distance maps. The main patterns are almost always captured, but other than that, we observed that the network simply puts the rest of distances in the last bin (visualized as dark blue regions). One has to keep in mind, however, that input was essentialy composed of amino acid correlations in the MSA. Thus highly correlated pairs should be easily extracted and so should the uncorrelated ones. The hard task is to fill in the void between those two extreme
+
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{imgs_andy/139lA00_real_pred_3D_v2.png}
-    \caption{Comparison of real vs. predicted 3D structure}
-    \label{fig:real_pred}
+    \includegraphics[width=\linewidth]{imgs_tomas/T1016_structure.png}
+    \caption{Domain (T1016-D1) from CASP13 with the highest TMscore = 0.66. On the left is the real structure; on the right the one optimized by CONFOLD2}
+    \label{fig:T1016}
 \end{figure}
 
 \section{Structure Realization}
@@ -204,7 +202,7 @@ We saved intermediate models (after each epoch) and picked the one with lowest o
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{imgs_tomas/norm_histograms.png}
+    \includegraphics[width=\linewidth]{imgs_tomas/histograms2.png}
     \caption{Fitted normal distributions to the distance histograms (middle) and von Mises distributions to the angle histograms (right) to a small region of domain 16pkA01}
     \label{fig:distributions}
 \end{figure}
@@ -241,15 +239,16 @@ The first term is a distance potential similar to the one we used, but with addi
 
 The second term is simple NLL function where the log probability is calculated from the von Mises distributions fitted to the angle histograms.
 
-Finally, the last term punishes the structure if steric clashes occur. This was the only function that AlphaFold tema borrowed from the Rosetta commons modelling software \cite{rosettacommons}. On top of this, the authors of the AlphaFold did not use gradient descent for optimization but a more advanced method - L-BFGS (Limited memory Broyden–Fletcher–Goldfarb–Shanno) which is a method that resembles the second order optimization by estimating the Hessian matrix (matrix of second derivatives). The method does not pick directions where the loss function changes the fastest, but rather where the gradients change the fastest. This results in more reasonable steps and thus the convergence is usually reached in smaller number of steps. The biggest downside of the method is that it is slow and tends to get stuck in saddle points of the loss function \cite{nn_dl}.
+Finally, the last term punishes the structure if steric clashes occur. This was the only function that AlphaFold team borrowed from the Rosetta commons modelling software \cite{rosettacommons}. On top of this, the authors of the AlphaFold did not use gradient descent for optimization but a more advanced method - L-BFGS (Limited memory Broyden–Fletcher–Goldfarb–Shanno) which is a method that resembles the second order optimization by estimating the Hessian matrix (matrix of second derivatives). The method does not pick directions where the loss function changes the fastest, but rather where the gradients change the fastest. This results in more reasonable steps and thus the convergence is usually reached in smaller number of steps. The biggest downside of the method is that it is slow and tends to get stuck in saddle points of the loss function \cite{nn_dl}.
 
 Due to lack of time, we omitted the last two terms of the potential together with the reference distribution and used only the distance potential. 
 
 One option that fixes the steric clashes is to use The Rosetta modelling software, which offers the so called FastRelax protocol. 
 FastRelax takes as an input a structure in \texttt{pdb} format and performs several steps of "relaxation", where the steric clashes are fixed and the free energy of the structure is minimized. 
 This is not the optimal solution, since the inter-residue distances that were optimized in the first step get slightly distorted, but the structure at least makes more sense on terms of molecular physics. 
-Nevertheless, we found the program to be too strong (with its default values) because it changed the structure too much. 
-% Therefore, until we develop a better potential function, we had to used a different software (CONFOLD2) where the optimization is based on satisfying contact map and secondary structure (Q3) constraints.
+Nevertheless, we found the program to be too strong (with its default values) because it changed the structure too much.
+Therefore, until we develop a better potential function we decided to use a third party software: CONFOLD2. 
+%we had to used a different software (CONFOLD2) where the optimization is based on satisfying contact map and secondary structure (Q3) constraints.
 
 \subsection{CONFOLD2}
 Another approach we used for structure realization was CONFOLD2 software.
@@ -280,7 +279,7 @@ According to Adhikari et al. \cite{confold}, this two stage modelling significan
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/contacts_secondary_eval.png}
-    \caption{Distributions of precision values for contact predictions and accuracy values for 3 state secondary structure classification, both calculated on the test set. The two values on top of the plot represent the mean (also depicted as a red dashed line) and standard deviation of the distribution. The green line shows the performance of a random model}
+    \caption{Distributions of precision values for contact predictions and accuracy values for 3 state secondary structure classification, both calculated on the test set. The two values on top of the plot represent the mean (also depicted as a red dashed line) and standard deviation of the distribution. The orange line shows the performance of a random model}
     \label{fig:contacts_sec}
 \end{figure}
 
@@ -291,8 +290,22 @@ According to Adhikari et al. \cite{confold}, this two stage modelling significan
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/casp13_tm_contacts_sec.png}
-    \caption{Performance of our Pipeline (NN + CF2) against team Alphafold and RaptorXcontact for selected targets used in CASP13}
+    \caption{Performance of our Pipeline (NN + CF2) against team Alphafold and RaptorXcontact for selected targets used in CASP13. Structures with TMScores less than 0.17 (red dashed line) are not better than random folds while structures with TMscore > 0.5 (green dashed line) should have similar overall topology the real structure}
     \label{fig:casp_performance}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{imgs_tomas/casp_distance_maps_test_structures.png}
+    \caption{Distance maps of two targets from CASP13, similar to Figure \ref{fig:distograms}. For the first domain the sequence search algorithm (HHblits) only found 43 sequences from which it "constructed" the MSA (the effective number of homologs $Neff \approx 30.7$).  Unsurprisingly the neural network had a hard time and CONFOLD2 could not do much to fix this. b) shows a different scenario, when the number of sequences in MSA was adequate (1039, with $Neff \approx 1157$) and so was the neural network prediction. After CONFOLD2 folded the structure, the distance map looks even more similar to reality than predicted one}
+    \label{fig:casp_distmaps}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{imgs_tomas/tm_vs_neff.png}
+    \caption{TM score vs Number of Effective homologs (Neff) in the MSA. Grey points represent the domains from test set; red points are the CASP13 targets}
+    \label{fig:tm_vs_neff}
 \end{figure}
 
 \section{Potential improvements}

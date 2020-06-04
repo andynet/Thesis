@@ -23,76 +23,96 @@ In each of the 3 subsections, the corresponding part of the diagram will be unra
     \label{fig:pipeline_input}
 \end{figure}
 
-During evolution, we expect that functional parts of proteins are going to be conserved. 
-Furthermore, we expect that two amino acids that are close to each other in the 3D space (not necessarily in the primary sequence) are going to co-evolve as well. 
-This co-evolution of spatially proximal amino acids should be reflected in the Multiple Sequence Alignment (MSA) of a protein.
+The primary sequence of proteins is usually recorded in the FASTA format.
+This is one of the most commonly used formats in bioinformatics.
+It is typically stored as a plain text file, possibly compressed. 
+Each record in FASTA format consists of a description line, starting with $>$ character, followed by a unique identifier of the particular sequence and a sequence.
+The sequence starts on a new line and is represented by single-letter codes.
+It is common to split very long sequences to multiple lines.
+One FASTA file can contain many records.
+An example of this format is shown in the Figure \ref{fig:fasta}.
 
-In order to generate a MSA for a selected domain, one has to first find proteins that share some ancestry with it (homologs), which is done by searching through database of sequences and picking proteins that have certain sequence similarity. 
-From these sequences we can generate the MSA.
-    
-From the MSA we can calculate the propensities of amino acids at each position of the sequence very easily, which yields the Position Specific Scoring Matrix (PSSM). 
-To model the interaction we can use the Direct Coupling Analysis (Potts model).
-    
-This section is going to be organised as follows. 
-We are first going to explain how to search for similar proteins and construct the MSA. 
-The second part will focus on the MSA summary statistics such as PSSMs and Potts Models. 
-In the last part we will discuss the encoding of the input, so that it is ready for use in the convolutional neural network.
-    
-% \subsection{Available data}
-% % \section{Data used for training and model evaluation}
-    
-% \begin{figure}[b!]
-%     \centering
-%     \includegraphics[width=\linewidth]{imgs_tomas/cath.png}
-%     \caption{CATH hierarchy \cite{cath}}
-%     \label{fig:cath}
-% \end{figure}
-    
-% For training we used protein sequences from the CATH S35 dataset. 
-% CATH is a database that clusters proteins with known structures based on 4 criteria: Class (secondary structure classes), Architecture (secondary structure arrangement in 3D space), Topology (how secondary structure elements are connected) and Homologous Superfamily (evolutionary relationship between domains). 
-% Figure \ref{fig:cath} shows the hierarchical relationship between the classes.
-    
-% To ensure dataset diversity, we used a dataset of sequences with pairwise sequence similarity of at most 35\% (hence the S35). 
-% The list of domains together with their sequences in \texttt{fasta} format can be accessed at: \href{ftp://orengoftp.biochem.ucl.ac.uk/cath/releases/latest-release/sequence-data/cath-domain-seqs-S35.fa}{oregonftp.biochem.ucl.ac.uk}.
-    
-% Domains are short regions of proteins that fold more or less independently of each other. 
-% The \texttt{fasta} file contains for each domain its protein name, chain identifier and the domain ranges. 
-% This information is crucial for downloading and preparing the structures from Protein Data Bank database. 
-% Two example headers are shown below. 
-    
-% \begin{center}
-%     \texttt{>cath|4\_2\_0|1a41A02/217-310}\\
-%     \texttt{>cath|4\_2\_0|3lnnA01/12-42\_283-342}
-% \end{center}
-    
-% These two examples show domains - \texttt{1A41} and \texttt{3LNN}, downloaded from the CATH database version 4.2.0. 
-% The next letter (\texttt{A} in both cases) represents the chain and the last two characters are the domain id, since a chain can consist of several domains. 
-% The full dataset (version from Sept. 4 2017) consists of 31289 domains. 
-    
-% We decided to exclude segmentated domains from the dataset and also the ones with missing PDB coordinates. 
-% This resulted in a set of 19953 domains. 
-% Looking at the sizes of homologous superfamilies in Figure \ref{fig:cath}, there are few large ones (like the immunoglobulin family in the bottom right corner with more than 8000 domains) and the rest are relatively small (less than 50). 
-% Our model works woth evolutionary data (MSA - PSSMs/Potts), which means that having a overrepresented family in the data set might introduce some biases that might make the model generalization more difficult. 
-% For this reason we decided to impose an exclusion threshold (= 500), where in families with more members we randomly picked "exclusion threshold" of domains out of them. 
-% After this filtering, the dataset size reduced to 11014 domains.
-% The distributions of CATH classes can be seen in Figure \ref{fig:cath_filtered}.
-    
-% \begin{figure}
-%     \centering
-%     \includegraphics[scale=0.4]{imgs_tomas/cath_distributions_filtered.png}
-%     \caption{Caption}
-%     \label{fig:cath_filtered}
-% \end{figure}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{imgs_andy/fasta.png}
+    \caption{Example of protein sequences in FASTA format.}
+    \label{fig:fasta}
+\end{figure}
+
+In our project, we used the FASTA format as the only input format to our pipeline.
+All other characteristics of the protein were calculated from this format.
 
 \subsection{Sequence search and MSA construction}
 
-% for blast part
-% BLAST is a heuristic that attempts to optimize a specific similarity measure.
-% The original BLAST program seeks short word pairs whose aligned score is at least T. Each such ‘hit’ is then extended, to test whether it is contained within a high-scoring alignment. For the default T value, this extension step consumes most of the processing time. 
+During evolution, we expect that functional parts of proteins are going to be conserved. 
+Furthermore, we expect that two amino acids that are close to each other in the 3D space (not necessarily in the primary sequence) are going to co-evolve as well. 
+This co-evolution of spatially proximal amino acids should be reflected in the Multiple Sequence Alignment (MSA) of related proteins.
 
-% At the bottom of the input preparation pipeline lies the sequence search step. The goal of an algorithm is to efficiently search large databases of sequences and picking ones that satisfy some similarity measure.
+To formalize the notion of relatedness of the proteins, we can use the edit distance of the sequences.
+The edit distance is the minimal number of operations, such as insertions, deletions or substitutions, required to transform one sequence of letters to another.
+The best possible distance score in these settings is 0 and is achievable only when we are measuring the distance between identical proteins.
+The higher values of the score can then be interpreted as a result of comparing less similar sequences.
+In bioinformatics, more complex weighting schemes can be used to reflect the underlying biology, e.g. substitution of one hydrophobic amino acid for another hydrophobic amino acid can be penalized by lower value than the substitution of hydrophobic amino acid for hydrophilic. 
 
-% The first method which we used - PSIBlast, iteratively constructs Position Specific Scoring Matrices which are used to compute score of candidate sequences (more on PSSMs in the subsection below). If the score exceeds some threshold the candidate sequence is added to the pool, from which the PSSM for the next iteration is computed. In the first iteration the sequences are compared using amino acid substitution matrix (eg. BLOSUM62).  
+Now, with this definition of relatedness, we could try to compute the distance score for every pair of the proteins considered in the analysis.
+Using the dynamic programming, computing the score for one pair takes $\mathcal{O}(m \cdot n)$ time, where $m$ and $n$ are the lengths of the two sequences.
+Unfortunately, this approach quickly becomes impractical as the number of sequences considered reach tens of thousands and therefore, we need something more efficient.
+
+A more efficient approach is to use the Basic Local Alignment Search Tool (BLAST) \cite{altschul1990basic}.
+It is a heuristic algorithm, based on the short exact word pairs.
+At first, the database from all considered sequences is constructed.
+Then, we take one sequence, also called the query sequence, and create all k-letter words from it.
+These k-letter words are then filtered using a scoring matrix and a parameter $T$ in such a way that only informative words will remain.
+The informative words are then mapped to the database using a quick exact search.
+This creates hits, which are then extended using dynamic programming.
+At the end only hits with alignment score above a certain threshold are kept.
+
+Although BLAST does not guarantee to discover all similar sequences, the results are usually very close to the optimum and the time consumption of this algorithm is much lower.
+
+After the sequence search, we want to create a Multiple Sequence Alignment from the identified similar sequences.
+The MSA can be formally defined as a matrix of size $N \times L$ containing 1-letter codes for amino acids or "-" symbolizing a gap, where $N$ is the number of sequences in the alignment and $L$ is the length of the alignment.
+Generally, we are interested in the MSA, which minimizes score similar to the distance score used previously.
+To find an optimal MSA is an NP-complete problem, but fortunately there exist heuristic approaches, which produce a good MSA in a reasonable time. 
+
+% checkpoint 20200602
+\subsection{Position-specific Scoring Matrix}
+
+Position-specific Scoring Matrix (PSSM) is generally used to represent biologically important patterns across multiple sequences. 
+
+To create the PSSM, let us assume that we already constructed a multiple sequence alignment (MSA) of our target sequence and related proteins.
+This multiple sequence alignment consists of $N$ rows representing sequences and $L$ columns representing positions of alignment.
+Furthermore, each sequence is a sequence of letters from an alphabet with $Q$ symbols.
+
+Then, the first step in the creation of PSSM is the calculation of the Position Frequency Matrix (PFM), by simply counting the number of occurrences of a symbol at a position in the MSA.
+Formally, PFM is a matrix with $Q$ rows and $L$ columns, where each entry $\text{PFM}_{q, l}$ is given by Equation \ref{eq:pfm}.
+
+\begin{equation}
+    \text{PFM}_{q, l} = \sum_{n = 1}^{N} \delta(\text{MSA}_{n, l}, q)
+    \label{eq:pfm}
+\end{equation}
+
+From the PFM, a Position Probability Matrix (PPM) is then created simply by scaling the counts by the number of sequences in the MSA.
+Therefore:
+
+\begin{equation}
+    \text{PPM}_{q, l} = \frac{1}{N} \text{PFM}_{q, l}
+\end{equation}
+
+The PSSM is then defined as the log-likelihoods of the PPM transformed by some background model $b$.
+For example, the simplest background model might be the one, where each symbol appears in the sequences equally likely, thus $b_q = \frac{1}{Q}$.
+This definition gives us the Equation \ref{eq:pssm}.
+
+\begin{equation}
+    \text{PSSM}_{q, l} = \log_2 \frac{\text{PPM}_{q, l}}{b_q}
+    \label{eq:pssm}
+\end{equation}
+
+In practice, more complex background models, such as the total frequency of a symbol in the entire MSA, is often used.
+Moreover, it is often encountered, especially when the number of sequences in the MSA is small, that some entries of the PFM are zeroes.
+This is an issue because it renders some sequences impossible even though they might be just very unlikely and due to the limited number of samples not observed.
+To address this issue, pseudo counts are often used.
+This means that we start the PFM construction with one assigned to every entry instead of zero.
+It will ensure that the probabilities in the PPM will be non-zero and it also accounts for finite sample size.
 
 \subsection{Potts Models}
 
@@ -103,197 +123,93 @@ In the last part we will discuss the encoding of the input, so that it is ready 
     \label{fig:potts_example}
 \end{figure}
 
-The goal of a Potts Model is to simulate probability distribution of every possible combination of symbols in an alphabet
+The goal of a Potts Model is to simulate probability distribution of every possible combination of symbols in an alphabet.
 
-Lets assume that we have a sequence $\boldsymbol{\sigma} = (\sigma_1, \sigma_2, ..., \sigma_L)$, where $L$ is the length of the multiple sequence alignment. 
-Lets further assume that each symbol $\sigma_i$ in the sequence comes from an alphabet $\mathcal{A} = (a_1, a_2, ..., a_Q)$ of size $Q$. 
+Let us assume that we have a sequence $\boldsymbol{\sigma} = (\sigma_1, \sigma_2, ..., \sigma_L)$, where $L$ is the length of the multiple sequence alignment. 
+Let us further assume that each symbol $\sigma_i$ in the sequence comes from an alphabet $\mathcal{A} = (a_1, a_2, ..., a_Q)$ of size $Q$. 
 Thus for sequence length $L$ we can generate $Q^L$ number of unique sequences.
     
 In our case, the sequence $\boldsymbol{\sigma}$ is some sequence of amino acids, and thus the alphabet size is equal $Q = 21$ (20 amino acids, 1 gap symbol).
         
-Given a MSA, we would like to find pairs of amino acids that are coupled, ie. the pairs of amino acids that are correlated due to their direct contact. 
-The reason why we can not use correlation data directly, is that some pairs of amino acids might be correlated through some intermediate paths.
+Given an MSA, we would like to find pairs of amino acids that are coupled, i.e. the pairs of amino acids that are correlated due to their direct contact. 
+The reason why we can not use correlation data directly is that some pairs of amino acids might be correlated through some intermediate paths.
         
-We have to keep in mind that MSA is only generated from a sample of sequences. 
+We have to keep in mind that MSA is only generated from a sample of sequences.
 Thus it can only help us to estimate the frequencies and connected correlations of amino acids. 
-To calculate the connected correlation of a pair of amino acid, we can use the covariance formula:
-            
-$$c_{ij}(k, l) = f_{ij}(k, l) - f_i(k) f_j(l)$$
+To calculate the connected correlation of a pair of amino acid, we use the covariance Equation \ref{eq:cov}.
+
+\begin{equation}
+    c_{ij}(k, l) = f_{ij}(k, l) - f_{i}(k) \cdot f_{j}(l),
+    \label{eq:cov}
+\end{equation}
+
+To calculate the frequency of a symbol $k$ at position $i$ in the MSA and the frequency of a pair of symbols $k, l$ at positions $i, j$ in the MSA, we use the Equations \ref{eq:freqs}.
+
+\begin{equation}
+    \begin{split}
+        f_{i}(k)     &= \frac{1}{N} \sum_{n = 1}^N \delta(\text{MSA}_{ni}, k) \\    
+        f_{ij}(k, l) &= \frac{1}{N} \sum_{n = 1}^N \delta(\text{MSA}_{ni}, k) \cdot \delta(\text{MSA}_{nj}, l)
+        \label{eq:freqs}
+    \end{split}
+\end{equation}
+
+Our goal is to create a model $\mathcal{P(\bm{\sigma})}$ that can reproduce the observed frequencies. 
+Formally, the constraints of the model are shown in the Equation \ref{eq:potts_constraints}.
         
-where
-$$f_i(k) = \frac{1}{B} \sum_{i = 1}^B \delta(\sigma_i^{(b)} = k)$$
-$$f_{ij}(k, l) = \frac{1}{B} \sum_{i = 1}^B \delta(\sigma_i^{(b)}, k)\delta(\sigma_j^{(b)}, l)$$
+\begin{equation}
+    \begin{split}
+        \sum_{\substack{\bm{\sigma}}} \mathcal{P}(\bm{\sigma} | \sigma_i = k) &= f_i(k) \\
+        \sum_{\substack{\bm{\sigma}}} \mathcal{P}(\bm{\sigma} | \sigma_i = k, \sigma_j = l) &= f_{ij}(k, l)
+    \end{split}
+    \label{eq:potts_constraints}
+\end{equation}
         
-calculate the frequency of symbol $(k)$ and pair of symbols $(k, l)$ at position $(i)$ and positions $(i, j)$ in the MSA. 
-$\delta(\sigma_i^{(b)}, k)$ is an indicator function that is equal to one when $\sigma_i^{(b)} = k$.
-        
-% add example
-        
-Our goal is to create a model: $\mathcal{P(\bm{\sigma})}$ that can reproduce the observed frequencies. 
-The constraints of the model are:
-        
-$$\mathcal{P}(\sigma_i = k) = \sum_{\substack{\bm{\sigma}\\ \sigma_i = k}} \mathcal{P}(\bm{\sigma}) = f_i(k)$$
-$$\mathcal{P}(\sigma_i = k, \sigma_j = l) = \sum_{\substack{\bm{\sigma}\\ \sigma_i = k \\ \sigma_j = l}} \mathcal{P}(\bm{\sigma}) = f_{ij}(k, l)$$
-        
-The model that satisfies these constraints and has the maximal information entropy is called a Potts Model:
+The model that satisfies these constraints and has the maximal information entropy is called a Potts Model.
+The Potts model can be written in terms of pairwise interactions $\bm{J}$ and propensities $\bm{h}$ as shown in Equation \ref{eq:Potts}.         
+In this formulation, the letter $\mathcal{Z}$ represents the normalizing partition function that ensures that the probabilities sum to 1.
         
 \begin{equation}
     \mathcal{P}(\bm{\sigma}) = \frac{1}{\mathcal{Z}} exp\left(\sum_{i = 1}^{L-1} \sum_{j=i+1}^L \bm{J}_{ij}(\sigma_i, \sigma_j) + \sum_{i=1}^L \bm{h}_i({\sigma_i})\right)
     \label{eq:Potts}
 \end{equation}
     
-In this equation, $\mathcal{Z}$ is the normalizing constant/partition function that ensures that the probabilities sum to 1. 
-The parameters of the model $\bm{J}$ and $\bm{h}$ describe the pairwise interactions and propensities respectively.
-        
-To find the parameters of a model that best describe the observed MSA, we can define a loss function:
+To find the parameters of a model that best describe the observed MSA, we optimize the negative loss likelihood function from the Equation \ref{eq:potts_loss}.
         
 \begin{equation}
-    \mathcal{L} = -\frac{1}{B} \sum_{i=1}^B logP(\bm{\sigma}^{(b)})
+    \mathcal{L} = -\frac{1}{N} \sum_{n=1}^N \log P(\bm{\sigma}^{(n)})
     \label{eq:potts_loss}
 \end{equation}
         
-Specifically for Potts Model: 
-        
+Specifically, for the Potts model, this loss function can be written as shown in Equation \ref{eq:potts_loss_ml}. 
+
 \begin{equation}
-    \mathcal{L}_(\bm{h}, \bm{J}) = log \mathcal{Z} - \sum_{i = 1}^L \sum_{k \in \mathcal{A}} f_i(k)\bm{h}_i(k) - \sum_{i = 1}^{L-1} \sum_{j=i+1}^L \sum_{k, l \in \mathcal{A}} f_{ij}(k, l) \bm{J}_{ij}(k, l)
-    \label{potts_loss_ml}
+    \mathcal{L}_(\bm{h}, \bm{J}) = \log \mathcal{Z} - \sum_{i = 1}^L \sum_{k \in \mathcal{A}} f_i(k)\bm{h}_i(k) - \sum_{i = 1}^{L-1} \sum_{j=i+1}^L \sum_{k, l \in \mathcal{A}} f_{ij}(k, l) \bm{J}_{ij}(k, l)
+    \label{eq:potts_loss_ml}
 \end{equation}
         
-This loss function is differentiable and so we seek to find its minimum. 
-However, to do so, we need to know the value of the partition function ($\mathcal{Z}$), which is practically incomputable for larger domains. To know its exact value, we would need to calculate the value of the potts model for every possible combination of letters in the alphabet for a given length of sequence. 
+This function is differentiable and we seek to find its minimum. 
+However, to do so, we need to know the value of the partition function $\mathcal{Z}$, which is practically incomputable for larger domains. 
+To know its exact value, we would need to calculate the value of the Potts model for every possible combination of letters in the alphabet for a given length of the sequence. 
 Therefore its approximation is required.
         
-Instead of considering the entire space of possible sequences, we can ask about the probability of a certain symbol in a sequence in MSA ($\sigma_r^{(b)}$) knowing the rest of symbols in the sequence ($\bm{\sigma}_{\setminus r}^{(b)}$). 
+Instead of considering the entire space of possible sequences, we can ask about the probability of a certain symbol in a sequence in MSA ($\sigma_r^{(b)}$), knowing the rest of symbols in the sequence ($\bm{\sigma}_{\setminus r}^{(b)}$). 
 The probability function in (\ref{eq:potts_loss}) becomes:
         
-$$
-P(\sigma_{r} = \sigma_r^{(b)} | \bm{\sigma}_{\setminus r} = \bm{\sigma}_{\setminus r}^{(b)}) = \frac{exp \left(h_r (\sigma_r^{(b)}) + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(\sigma_r^{(b)}, \sigma_i^{(b)})\right)}{\sum_{q \in \mathcal{A}} exp \left(h_r(q) + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(q, \sigma_i^{(b)})\right)}$$
-        
-This function is again, differentiable, although it does not minimize the loss defined in (\ref{eq:potts_loss}).
-However, as opposed to \ref{potts_loss_ml}, this objective function can be computed in reasonable time with gradient descent techniques (either first order optimization or second order optimization approximation via algorithms such LBFG-S)\cite{potts1, potts2}.
-        
-\subsection{Position-specific Scoring Matrix}
-
-Position-specific Scoring Matrix (PSSM) is generally used to represent biologically important patterns across multiple sequences. 
-
-To create the PSSM, let us assume that we already constructed a multiple sequence alignment (MSA) of our target sequence and related proteins.
-This multiple sequence alignment consists of $N$ rows representing sequences and $L$ columns representing positions of alignment.
-Furthermore, each sequence is a sequence of letters from an alphabet with $Q$ symbols.
-
-Then, the first step in creation of PSSM is the calculation of the Position Frequency Matrix (PFM), by simply counting the number of occurences of a symbol at a position in the MSA.
-Formally, PFM is a matrix with $Q$ rows and $L$ columns, where each entry $\PFM_{q, l}$ is given by Equation \ref{eq:pfm}.
-
 \begin{equation}
-    \PFM_{q, l} = \sum_{n = 1}^{N} \delta(\MSA_{n, l}, q)
-    \label{eq:pfm}
+    P(\sigma_{r} = \sigma_r^{(b)} | \bm{\sigma}_{\setminus r} = \bm{\sigma}_{\setminus r}^{(b)}) = 
+        \frac
+            {exp \left(h_r (\sigma_r^{(b)}) + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(\sigma_r^{(b)}, \sigma_i^{(b)})\right)}
+            {\sum_{q \in \mathcal{A}} exp \left(h_r(q) + \sum_{\substack{i = 1\\i\neq r}}^L J_{ri}(q, \sigma_i^{(b)})\right)}
 \end{equation}
-
-From the PFM, a Position Probability Matrix (PPM) is then created simply by scaling the counts by the number of sequences in the MSA.
-Therefore:
-
-\begin{equation}
-    \PPM_{q, l} = \frac{1}{N} \PFM_{q, l}
-\end{equation}
-
-The PSSM is then defined as the log likelihoods of the PPM transformed by some background model $b$.
-For example, the simplest background model might be the one, where each symbol appears in the sequences equally likely, thus $b_q = \frac{1}{Q}$.
-This definition gives us the Equation \ref{eq:pssm}.
-
-\begin{equation}
-    \PSSM_{q, l} = \log_2 \frac{\PPM_{q, l}}{b_q}
-    \label{eq:pssm}
-\end{equation}
-
-In practice, more complex background models, such as the total frequency of a symbol in the entire MSA, is often used.
-Moreover, it is often encountered, especially when number of sequences in the MSA is small, that some entries of the PFM are zeroes.
-This is an issue, because it renders some sequences impossible even though they might be just very unlikely and due to the limited number of samples not observed.
-To address this issue, pseudocounts are often used.
-This means that we start the PFM construction with one assigned to every entry instead of zero.
-It will ensure that the probabilities in the PPM will be non-zero and it also accounts for finite sample size.
-
-
-% Position Probability Matrix $\mathcal{F} = \{f_{ij}\}$ with $L$ rows (target sequence length) and $Q$ columns (alphabet size). 
-% Each entry in the matrix is a frequency of occurence of a symbol in the current position in the MSA:
         
-% $$f_i^*(k) = \frac{1}{B} \sum_{b = 1}^B \delta(\sigma_i^{(b)}, k)$$
-
-% In both cases,  the  influence  of  pseudocounts  declines  with  the  size  of  the  training  set  (√N/N  in  the  first  case,  0.1/N  in  the  other),  which  is  just  what  you  would  want,  since  the  purpose  of  pseudocounts  is  to  diminish  the  distortions  inherent  in  using  a  small  training  set.  The  higher  the  value  of  B,  the  more  sequences  will  be  found  (including  perhaps  some  real  binding  sites  that  might  otherwise  be  missed)  but  at  the  cost  of  diluting  the  impact  of  what  is  known  about  the  binding  site.  Lower  values of B thus produce fewer false positives.
-        
-% To ensure that there are no zero probabilities in the final matrix, pseudocounts are added. 
-% If $u_k$ is the occurence of a symbol in the entire MSA and $C$ is some arbitrary constant (usually equal to $\sqrt{L}$ or $0.1$), the frequency can be calculated as:
-% $$f_i(k) = \frac{B(f_i^*(k) + u_k C)}{B + C}$$
-        
-% The items in PSSM are then defined as:
-        
-% $$PSSM_i(k) = log_2\left(\frac{f_i(k)}{u_k}\right)$$
-        
-% (\href{http://www.people.vcu.edu/~elhaij/IntroBioinf/Notes/PSSM.pdf}{http://www.people.vcu.edu/~elhaij/IntroBioinf/Notes/PSSM.pdf})
-        
-% (\href{https://en.wikipedia.org/wiki/Position_weight_matrix#cite_note-Stormo1982-1}{WIKI})
-        
-% \section{Data used for training and model evaluation}
-    
-% \begin{figure}[b!]
-%     \centering
-%     \includegraphics[width=\linewidth]{imgs_tomas/cath.png}
-%     \caption{CATH hierarchy \cite{cath}}
-%     \label{fig:cath}
-% \end{figure}
-    
-% For training we used protein sequences from the CATH S35 dataset. 
-% CATH is a database that clusters proteins with known structures based on 4 criteria: Class (secondary structure classes), Architecture (secondary structure arrangement in 3D space), Topology (how secondary structure elements are connected) and Homologous Superfamily (evolutionary relationship between domains). 
-% Figure \ref{fig:cath} shows the hierarchical relationship between the classes.
-    
-% To ensure dataset diversity, we used a dataset of sequences with pairwise sequence similarity of at most 35\% (hence the S35). 
-% The list of domains together with their sequences in \texttt{fasta} format can be accessed at: \href{ftp://orengoftp.biochem.ucl.ac.uk/cath/releases/latest-release/sequence-data/cath-domain-seqs-S35.fa}{oregonftp.biochem.ucl.ac.uk}.
-    
-% Domains are short regions of proteins that fold more or less independently of each other. 
-% The \texttt{fasta} file contains for each domain its protein name, chain identifier and the domain ranges. 
-% This information is crucial for downloading and preparing the structures from Protein Data Bank database. 
-% Two example headers are shown below. 
-    
-% \begin{center}
-%     \texttt{>cath|4\_2\_0|1a41A02/217-310}\\
-%     \texttt{>cath|4\_2\_0|3lnnA01/12-42\_283-342}
-% \end{center}
-    
-% These two examples show domains - \texttt{1A41} and \texttt{3LNN}, downloaded from the CATH database version 4.2.0. 
-% The next letter (\texttt{A} in both cases) represents the chain and the last two characters are the domain id, since a chain can consist of several domains. 
-% The full dataset (version from Sept. 4 2017) consists of 31289 domains. 
-    
-% We decided to exclude segmentated domains from the dataset and also the ones with missing PDB coordinates. 
-% This resulted in a set of 19953 domains. 
-% Looking at the sizes of homologous superfamilies in Figure \ref{fig:cath}, there are few large ones (like the immunoglobulin family in bottom left with more than 8000 domains) and the rest are relatively small (less than 50). 
-% Our model works woth evolutionary data (MSA - PSSMs/Potts), which means that having a overrepresented family in the data set might introduce some biases that might make the model generalization more difficult. 
-% For this reason we decided to impose an exclusion threshold (= 500), where in families with more members we randomly picked "exclusion threshold" of domains out of them. 
-% After this filtering, the dataset size reduced to 11014 domains. 
-% The distributions of CATH classes can be seen in Figure \ref{fig:cath_filtered}.
-    
-% \begin{figure}
-%     \centering
-%     \includegraphics[scale=0.4]{imgs_tomas/cath_distributions_filtered.png}
-%     \caption{Caption}
-%     \label{fig:cath_filtered}
-% \end{figure}
-    
-%\subsection{Train Validation Test split}
-    
-% In the AlphaFold paper \cite{alphafold}, the authors decided to create train/validation/test set of homologous superfamilies instead of randomly picking the domain. 
-% The rationale behind this is to include all members of each homologous superfamily in either training, validation or test set. 
-% This ensures that when evaluating the model performance of a set of proteins, that very similar proteins were not used for training. 
-    
-% We decided to train our models on a set of 9394 domains (several had to be excluded due to factors such as low sequence similarity to known structures or inability to converge/slow convergence of the Potts Model). This set of domains was used to train the neural networks and for the validation during the training process.
-% The performance of the different models was evaluated on a independent validation set of 1000 domains. For each model we evaluated its inter-residue distance predictions as well as the auxiliary outputs (secondary structure and phi and psi torsion angles).
-% The final structures and performance metrics were evaluated on a set of 500 test domains.
-    
-% Furthermore, to simulate the famous CASP competition we downloaded the domains from CASP13 (2018) - regular targets category (T). This allowed us to compare our results with the best teams in the world.
-% These domains were not used in training because the CATH domain list we downloaded was uploaded in September 2017. 
+This function is again differentiable, although it does not minimize the loss defined in Equation \ref{eq:potts_loss}.
+However, as opposed to Equation \ref{eq:potts_loss_ml}, this objective function can be computed in reasonable time with gradient descent techniques (either first-order optimization or second-order optimization approximation via algorithms such LBFG-S)\cite{potts1, potts2}.
 
 \input{2_neural_networks}
 
 \section{Structure Realization}
 
-\begin{figure}
+\begin{figure}[b]
     \centering
     \includegraphics[scale=0.5]{imgs_tomas/backbone.png}
     \caption{Protein backbone with atom names. Modified picture from \cite{ramachandran}}
@@ -361,14 +277,14 @@ $$
 
 where $\alpha$ is the angle between the two vectors and $\bm{n}$ is the unit normal vector perpendicular to both vectors.
 
-\begin{figure}
-    \centering
-    \includegraphics[scale=0.23]{imgs_tomas/vector_ops.png}
-    \caption{Visual demonstration of vector cross-product - a) and scalar/dot product - b)}
-    \label{fig:vector ops}
-\end{figure}
-
 \subsection{Background - Vector Dot-product}
+% \begin{figure}
+%     \centering
+%     \includegraphics[scale=0.23]{imgs_tomas/vector_ops.png}
+%     \caption{Visual demonstration of vector cross-product - a) and scalar/dot product - b)}
+%     \label{fig:vector ops}
+% \end{figure}
+
 The dot product $\bm{k} \cdot \bm{v}$ is an operation that projects vector $\bm{v}$ onto a line defined by vector $\bm{k}$ and then scales the projection by the size of vector $\bm{k}$. In the special case when $\bm{k}$ is a unit vector, the result is a simple projection. Formally:
 
 $$\bm{k} \cdot \bm{v} = ||\bm{k}||~||\bm{v}||~cos(\alpha) = k_x v_x + k_y v_y + k_z v_z$$
@@ -415,7 +331,7 @@ All together, the rotational formula is:
     \centering
     % \includegraphics[scale=0.25]{imgs_tomas/cbeta.png}
     \includegraphics[width=\linewidth]{imgs_tomas/cbeta.png}
-    \caption{Caption}
+    \caption{C$_\beta$ atom placement}
     \label{fig:cbeta}
 \end{figure}
 
@@ -488,7 +404,7 @@ We will first describe an alignment free metric we used for comparing and choosi
 
 \subsection{(D)lDDT - (Distogram) local Distance Difference Test}
 
-The lDDT metric evaluates the regions of distance matrices capturing local folding patterns. This means that only residues that are closer in reality than some threshold (usually $D_{ij} < 15$\AA) are compared. It is less affected by outliers than RMSD (Root Mean Squared Deviation) and correlates well with the global similarity measures.
+The lDDT metric evaluates regions of distance matrices capturing local folding patterns. This means that only residues that are closer in reality than some threshold (usually $D_{ij} < 15$\AA) are compared. It is less affected by outliers than RMSD (Root Mean Squared Deviation) and correlates well with the global similarity measures.
 
 The algorithm counts the number of inter-residue distances that are closer to the reality than another imposed threshold - it cycles through 4 different ones: $t \in \{0.5, 1, 2, 4\}$\AA \cite{lddt}.
 

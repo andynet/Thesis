@@ -46,8 +46,8 @@ Although the progress in the past few decades, the prediction of novel amino aci
 
 \begin{figure}[b!]
     \centering
-    \includegraphics[width=\linewidth]{imgs_tomas/primary_tertiary.png}
-    \caption{Primary (a)) \cite{anfinsen} and tertiary structure (b)) \cite{pdb} of bovine pancreatic ribonuclease.}
+    \includegraphics[width=\linewidth]{imgs_tomas/bopaen2.png}
+    \caption{Primary and tertiary structure of bovine pancreatic ribonuclease \cite{pdb}.}
     \label{fig:primarytertiary}
 \end{figure}
 
@@ -68,21 +68,28 @@ If we had a computer that can generate one of these unique conformations, comput
 
 \begin{figure}
     \centering
-    \includegraphics[scale=0.5]{imgs_tomas/backbone.png}
-    \caption{Protein backbone with atom names. Modified picture from \cite{ramachandran}}
-    \label{fig:backbone0}
+    \includegraphics[width=\linewidth]{imgs_tomas/torsion_2.png}
+    \caption{a): Protein backbone with atom names. Modified picture from \cite{ramachandran}; b):Torsion Angles - planes and inter-atom distance and angles notation}
+    \label{fig:backbone_torsion}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_tomas/torsion.png}
-    \caption{Torsion Angles - planes and inter-atom distance and angles notation}
-    \label{fig:torsion}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \includegraphics[scale=0.5]{imgs_tomas/backbone.png}
+%     \caption{Protein backbone with atom names. Modified picture from \cite{ramachandran}}
+%     \label{fig:backbone0}
+% \end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\linewidth]{imgs_tomas/torsion.png}
+%     \caption{Torsion Angles - planes and inter-atom distance and angles notation}
+%     \label{fig:torsion}
+% \end{figure}
 
 Amino acids are organic compounds that are the basic building blocks of proteins. 
 22 amino acids are involved in protein generation, 20 of them which are encoded by DNA are also subject to translation processes. 
-Structurally, amino acids are composed of two parts (see Figure \ref{fig:backbone0}):
+Structurally, amino acids are composed of two parts (see Figure \ref{fig:backbone_torsion}a)):
 
 \begin{enumerate}
     \item Backbone
@@ -99,7 +106,7 @@ Even if this is not completely true, the spreads of the distributions are relati
 This assumption leads to the following consequence: since the distances and angles between consecutive atoms are constant, instead of describing the backbone as a list of coordinates, one can use the so-called torsion angles.
 
 Torsion angle, or a dihedral angle, is an angle defined by two intersecting planes. 
-Since there are three atoms in the backbone, we can define three pairs of intersecting planes and thus define the three torsion angles (Figure \ref{fig:torsion}). 
+Since there are three atoms in the backbone, we can define three pairs of intersecting planes and thus define the three torsion angles (Figure \ref{fig:backbone_torsion}b)). 
 Knowing the position of three preceding atoms, the torsion angle $\phi$ defines the position of the next C atom, the torsion angle $\psi$ defines the position of the next N atom and finally $\omega$ defines the position of the next C$_\alpha$ atom. 
 The bond between atom C and N in the protein backbone is a peptide bond that behaves similarly to a double bond and is almost always equal to 180\degree~(trans isomerism; 0\degree~for cis configuration). 
 This means that for the construction of protein geometry one only requires two torsion angles: $\phi$ and $\psi$.
@@ -222,7 +229,7 @@ Currently, the accuracy of this approach is comparable to the energy-based metho
 
 \begin{figure}
     \centering
-    \includegraphics[scale=0.47]{imgs_tomas/casp_analysis_bw.png}
+    \includegraphics[scale=0.47]{imgs_tomas/casp_correct.png}
     \caption{Results from Previous CASP competitions in terms of GDT-TS (Global Distance Test - Total Score) - a), and TM-Score (Template Modelling) - b) of the regular targets (T). For each domain in each CASP competition, 10 best predictions were taken and their scores extracted. Only teams that submitted predictions for more than 19 domains were considered.
     Figure c) and d) summarize the results of best teams at CASP13 in terms of the TM-score - c) and TM-score based rank - d). For every domain, the TM-score was extracted and teams were ranked according to it. If a team uploaded more than 1 prediction, only the best one was taken. In both boxplots (c) and d)) the bar represents the median and the 'X' sign the mean. Data downloaded from: \cite{casp}}
     \label{fig:casp}
@@ -248,7 +255,7 @@ The categories of the competition usually include:
     
     \item Refinement Targets (R)
     
-        Measures the ability to refine targets after the first stage modelling phase. After the deadline for prediction of regular targets, the competitors will be given one of the best models for each protein with the task to further optimize/refine the structure.
+        Measures the ability to refine targets after the first stage modelling phase. After the deadline for prediction of regular targets, the competitors are given one of the best models for each protein with the task to further optimize/refine the structure.
         
     \item Other
     
@@ -277,8 +284,8 @@ The contact precision increased from $\sim 27\%$ to $~47\%$ \cite{casp12}.
 
 Teams participating in CASP13 pushed this accuracy to $70\%$, mainly due to the use of deep neural networks, with great dependence on the alignment depth. 
 Another advance came through the prediction of inter-residue distance maps, which were then used as constraints to folding the protein. 
-This idea was adopted by several teams, among which AlphaFold (A7D) predicted 42 domains out of 123, best out of all competitors. 
+This idea was adopted by several teams, among which AlphaFold (A7D) predicted 11 domains out of 30, best out of all competitors. 
 Even though this is an impressive result, looking at Figure \ref{fig:casp} c) and d) one can see that performance of other teams was similar to the performance of AlphaFold in terms of the TM-Score and the median rank. 
 Deep learning pipelines of teams such as AlphaFold, RaptorX, were accompanied by teams implementing ideas such as fragment assembly (team Zhang \cite{zhang}), a combination of several features extracted from the structure from PDB database (Multicom \cite{multicom0}) or clever definition of statistical potential and good structure quality assessment (VoroMQA-select \cite{voromqa}).
 
-The approach taken by AlphaFold relies heavily on the number of found homologs in sequence databases, which might be a reason for the large spread of median ranks in Figure \ref{fig:casp}.
+The approach taken by AlphaFold relies heavily on the number of found homologs in sequence databases, which might be a reason for the large spread of ranks in Figure \ref{fig:casp}.

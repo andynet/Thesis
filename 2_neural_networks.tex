@@ -1,4 +1,3 @@
-\newpage
 \section{Neural Networks}
 A big part of this project revolved around artificial neural networks, which we used to model the distance maps of particular proteins. 
 Therefore, in this section, we fully describe these neural networks.
@@ -9,20 +8,8 @@ Afterwards, we extend this neural network to enable it to model complex function
 Next, we show how to use these networks to model spatially dependent data, like, for example, pictures.
 Finally, we unite these theoretical concepts and reveal how we used them for the protein folding problem.
 
-% Neural networks are machine learning models discovered in  
-% In this section, we will present neural networks due to their high importance in the process of protein folding.
-
-% With sufficient size, neural networks are able to learn any mathematical function.
-% Their high complexity and flexibility even allows some particular subtypes, like for example recurrent neural networks, to be turing complete.
-
-% The main challenge these systems are facing is in the fact, that they usually need very big datasets to learn the true mapping and training of such models on such big datasets are often infeasible.
-% Nevertheless, the amounts of data collected by mankind is increasing and the computational resources are expected to increase as well. 
-
-% Why Neural Networks?
-
-
 \subsection{The basic architecture of Neural Networks}
-Artificial neural networks are machine learning models first discovered in 1958 by psychologist Frank Rosenblatt. % invented, not discovered
+Artificial neural networks are machine learning models first invented in 1958 by psychologist Frank Rosenblatt.
 They were heavily inspired by the human nervous system.
 The nervous system is composed of small units, called neurons.
 These neurons are connected via specialized connections called synapses.
@@ -30,39 +17,31 @@ The synaptic connections allow the neurons to send electrochemical signals to co
 The strength of these connections regularly adapts to the external stimulation, which often changes the signal pathways and, in turn, influences the resulting reactions of the organism.
 This process is commonly called learning.
 
-\begin{figure}
+In artificial neural networks, we simulate this process in a computer.
+Similarly to biological neural networks, we have some external stimuli in the form of input features $X$.
+Furthermore, we provide some desired reaction in the form of output labels $Y$, which we would like our network to learn.
+The labels are formally related to the features in such a way, that there exists a function $f: X \to Y$.
+The learning process then corresponds to finding such function $h \in H$, which approximates the function $f$ the best.
+The architecture of the neural network puts some constraints on the set $H$ of all possible functions $h$.
+
+\begin{figure}[ht]
     \centering
-    \includegraphics[width=0.5\linewidth]{imgs_andy/biological_neuron.png}
-    \includegraphics[width=0.5\linewidth]{imgs_andy/artificial_neuron.png}
-    \caption{Biological  and Artificial neuron}
+    \includegraphics[width=\linewidth]{imgs_tomas/perceptron.png}
+    \caption{Biological and Artificial neuron}
     \label{fig:neurons_comparison}
 \end{figure}
-
-In artificial neural networks, we simulate this process in a computer.
-Similarly to biological neural networks, we have some external stimuli in the form of features $X$.
-Furthermore, we provide some desired reaction in the form of labels $Y$, which we would like our network to learn.
-The labels are formally related to the features in such a way, that there exists a function $f: X \to Y$.
-The learning process then corresponds to finding such function $h$, which approximates the function $f$ the best.
-The architecture of the neural network puts some constraints on the set $H$ of all possible functions $h$.
 
 To put the notation in context, let us present an example of the Perceptron architecture.
 Imagine we have collected features $X \in R^{n \times d}$, where $n$ is the number of observations and $d$ is the number of predictors.
 Based on these features, we would like to build a system capable of distinguishing if datapoint $x_i \in X$ comes from a dog ($y_i = 1$) or a cat ($y_i = -1$).
-Our datapoint can, for example, consist of the weight of the animal and the length of the animal's nose.
+Our data point can, for example, consist of the weight of the animal and the length of the animal's nose.
 Given this information, we can construct a Perceptron with 2 input neurons connected to 1 output neuron.
-This architecture is depicted in Figure \ref{fig:perceptron}.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.5\linewidth]{imgs_andy/perceptron.png}
-    \caption{Perceptron}
-    \label{fig:perceptron}
-\end{figure}
+This architecture is depicted in Figure \ref{fig:neurons_comparison} on the right.
 
 Formally, this architecture models the relation between $X$ and $Y$ according to the Equation \ref{eq:perceptron}. 
 
 \begin{equation}
-    y_i = sign(\sum_{j=1}^{d} w_j \cdot x_{ij}) 
+    y_i \sim h(x_{ij})= sign(\sum_{j=1}^{d} w_j \cdot x_{ij}) 
     \label{eq:perceptron}
 \end{equation}
 
@@ -75,32 +54,25 @@ Therefore, we can treat this special case by using the general Equation \ref{eq:
 Furthermore, the Equation \ref{eq:perceptron} can be simplified using the vector notation to Equation \ref{eq:perceptron2}.
 
 \begin{equation}
-    Y = sign(W \cdot X)
+    h(X) = sign(X \cdot W)
     \label{eq:perceptron2}
 \end{equation}
 
 To resolve the problem with linear separability, we can extend our model by using additional layers of neurons.
 These additional layers are commonly called hidden layers of the neural network.
-In order to be efficient, the hidden layers need to apply some non-linear function, usually called activation function.
+To be efficient, the hidden layers need to apply some non-linear function, also called the activation function.
 The function modelled by this new network is of the form
 
 \begin{equation}
-    Y = sign(W_2 \cdot a(W_1 \cdot X)),
+    Y = sign(a_{k-1}(...a_2(a_1(X \cdot W_1) \cdot W_2)...\cdot W_{k-1}) \cdot W_{k}),
     \label{eq:perceptron3}
 \end{equation}
 
-where $a$ is the activation function and $W_l, l \in {1, 2}$ are the weights of the connections corresponding to transition from layer $l-1$ to layer $l$.
+where $a_l, l \in {1, ..., k}$ are the activation functions and $W_l, l \in {1, ..., k}$ are the weights of the connections corresponding to transition from layer $l-1$ to layer $l$.
 
 There are many possibilities for the activation function and the choice of it usually depends on the particular goal in mind.
 % from here it feels sloppy
-Some of the most commonly used activation functions are:
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_tomas/activation_functions.png} % activation_function_plus_derivatives.png
-    \caption{Activation Functions}
-    \label{fig:activation_functions}
-\end{figure}
+Some of the most commonly used activation functions are listed in Figure \ref{list:activations} and visualized in the Figure \ref{fig:activation_functions}.
 
 \begin{itemize}
     \item $\text{Identity}(x) = x$
@@ -113,16 +85,23 @@ Some of the most commonly used activation functions are:
           \end{cases}$
     \item $\text{ReLU}(x) = \max(0, x)$
     \item $\text{ELU}(x) = \max(0,x) + \min(0, \alpha * (\exp(x) - 1))$
-    \item $\text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}$
+    % \item $\text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}$
     \label{list:activations}
 \end{itemize}
 
-% identity
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{imgs_tomas/activation_functions.png}
+    \caption{Activation Functions}
+    \label{fig:activation_functions}
+\end{figure}
+
+% checkpoint
 % softmax
 % tanh(x) = 2*sigmoid(2x) -1
 
-% impressive source
 % https://ml-cheatsheet.readthedocs.io/en/latest/activation_functions.html
+% In the single-layer Perceptron example, we already used a non-linear activation function on the output layer - the sign function.
 Probably the first non-linear function to consider would be the sign function, since we already used this function in the output layer of the single-layer Perceptron.
 Unfortunately, this function has a derivative 0 almost everywhere, with the exception of $x=0$ where it is non-differentiable and discontinuous.
 These properties complicate the process of learning and therefore this function is rarely used during the training of the model.

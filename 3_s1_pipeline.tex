@@ -126,10 +126,10 @@ The full dataset (version from Sept. 4 2017) consists of 31289 domains.
 We decided to exclude segmentated domains from the dataset and also the ones with missing PDB coordinates. 
 This resulted in a set of 19953 domains. 
 Looking at the sizes of homologous superfamilies in Figure \ref{fig:cath}, there are few large ones (like the immunoglobulin family in the bottom right corner with more than 8000 domains) and the rest are relatively small (less than 50). 
-Our model works woth evolutionary data (MSA - PSSMs/Potts), which means that having a over-represented family in the data set might introduce some biases that might make the model generalization more difficult. 
+Our model works with evolutionary data (MSA - PSSMs/Potts), which means that having an over-represented family in the data set might introduce some biases that might make the model generalization more difficult. 
 For this reason we decided to impose an exclusion threshold (= 500), where in families with more members we randomly picked "exclusion threshold" of domains out of them. 
 After this filtering, the dataset size reduced to 11014 domains.
-The distributions of CATH classes can be seen in Figure \ref{fig:cath_filtered}.
+The distributions of CATH classes after filtering can be seen in Figure \ref{fig:cath_filtered}.
     
 \begin{figure}
     \centering
@@ -147,7 +147,7 @@ The distributions of CATH classes can be seen in Figure \ref{fig:cath_filtered}.
     \label{fig:cath_trainvaltest}
 \end{figure}
 
-In the AlphaFold paper \cite{alphafold}, the authors decided to create train/validation/test set of homologous superfamilies instead of randomly picking the domain. 
+In the AlphaFold paper \cite{alphafold}, the authors decided (and so did we) to create train/validation/test set of homologous superfamilies instead of randomly sampling domains. 
 The rationale behind this is to include all members of each homologous superfamily in either training, validation or test set. 
 This ensures that when evaluating the model performance of a set of proteins, that very similar proteins were not used for training. 
     
