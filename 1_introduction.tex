@@ -1,9 +1,9 @@
 \chapter{Introduction}
 
 %\section{Proteins and Protein Folding}
-Protein structure prediction is one of the important problems in biology, with direct implications for medicine. Computational techniques have been developing for the past few decades, mainly due to the high cost of experimental inference. The advance in accuracy of prediction of 3D structure from sequence of amino acids has been captured on a biennial competition CASP, with the last 2 rounds showing great potential of neural networks. 
+Protein structure prediction is one of the important problems in biology, with direct implications for medicine. Computational techniques have been developing for the past few decades, mainly due to the high cost of experimental inference. The advance in accuracy of prediction of 3D structure from a sequence of amino acids has been captured on a biennial competition CASP, with the last 2 rounds showing the great potential of neural networks.
     
-    In this project we built our own pipeline based on evolutionary data. We trained a deep convolutional network for predicting inter-residue distances together with secondary structure and torsion angles. For the last step we used two approaches: first we built a model of protein geometry that finds the tertiary structure while optimizing constraints set by the neural network, and second we used a third party software CONFOLD2.
+    % In this project we built our own pipeline based on evolutionary data. We trained a deep convolutional network for predicting inter-residue distances together with secondary structure and torsion angles. For the last step we used two approaches: first we built a model of protein geometry that finds the tertiary structure while optimizing constraints set by the neural network, and second we used a third party software CONFOLD2.
 \section{Protein Structure Prediction}% - Motivation}
 
 \begin{table}
@@ -24,7 +24,7 @@ Protein structure prediction is one of the important problems in biology, with d
     \label{tab:aa_codes}
 \end{table}
 
-Proteins are one of the essential cellular macromolecules, together with DNA, RNA, saccharides, lipids and others.
+Proteins are one of the essential cellular macromolecules, together with DNA, RNA, saccharides, lipids, and others.
 They perform a variety of functions inside and outside of cells as receptors, enzymes, antibodies, hormones, structural components, transporters, etc. 
 
 At the bottom level proteins are composed of chained amino acids, which are connected through peptide bonds. 
@@ -34,15 +34,15 @@ The sequence of amino acids is called the primary structure of a protein.
 
 To perform their function proteins fold into stable three-dimensional structures in a very dense and fast-changing environment.
 This three-dimensional structure is also called the tertiary structure of the protein. 
-On the lower level, the secondary structure describes local folds of amino acids, where we distinguish three basic classes: Helices, Sheets and Coils.
+On the lower level, the secondary structure describes local folds of amino acids, where we distinguish three basic classes: Helices, Sheets, and Coils.
 The very delicate conformation of the protein is crucial for the correct functioning of the cell.
-In rare cases, when the structure is corrupted, it might result in serious diseases such as cystic fibrosis, Parkinson's disease, Huntington's disease, cancer and many others \cite{protein_misfolding_diseases}.
+In rare cases, when the structure is corrupted, it might result in serious diseases such as cystic fibrosis, Parkinson's disease, Huntington's disease, cancer, and many others \cite{protein_misfolding_diseases}.
 
 It is hypothesized that the instructions for the folding are encoded in the primary protein structure. 
 The thermodynamic theory states, that if a denatured protein occurs in an environment it was selected for (pH, ionic strength, etc.) then it will fold into a state with minimum Gibbs free energy \footnote{Gibbs free energy describes the stability of the fold. It is composed of three terms: $H$ (enthalpy), $S$ (entropy) and $T$ (Temperature). Formally: $G = H - TS$. The smaller the free energy the more stable the conformation is}.
 This state is also called a "native state" of a protein. 
 Christian B. Anfinsen and his group published a famous paper in 1973, where they managed to denature ("unfold") a protein (bovine pancreatic ribonuclease) with urea - shown in Figure \ref{fig:primarytertiary}a). 
-Afterwards, when they removed urea the protein folded back into the same state as the initial one \cite{anfinsen}. 
+Afterward, when they removed urea the protein folded back into the same state as the initial one \cite{anfinsen}. 
 This suggests a link between the primary and tertiary structure which has to be uncovered. 
 Although the progress in the past few decades, the prediction of novel amino acid sequences remains a great challenge, mainly due to the high complexity of the problem.
 
@@ -103,7 +103,7 @@ Structurally, amino acids are composed of two parts (see Figure \ref{fig:backbon
         attached to the backbone through a C$_\beta$ - C$_\alpha$ bond. The residue is a unique molecule that distinguishes amino acids from each other. The only amino acid without a residue is Glycine, which instead of the C$_\beta$ has a hydrogen atom.
 \end{enumerate}
 
-In theory, the bonds between backbone atoms (N - C$_\alpha$, C$_\alpha$ - C and C - N) should be of constant length, as well as the angle defined by a unique set of three consecutive atoms (N - C$_\alpha$ - C, C$_\alpha$ - C - N and C - N - C$_\alpha$). 
+In theory, the bonds between backbone atoms (N - C$_\alpha$, C$_\alpha$ - C and C - N) should be of constant length, as well as the angle defined by a unique set of three consecutive atoms (N - C$_\alpha$ - C, C$_\alpha$ - C - N, and C - N - C$_\alpha$). 
 Even if this is not completely true, the spreads of the distributions are relatively low, which allows us to treat them as constants.
 
 This assumption leads to the following consequence: since the distances and angles between consecutive atoms are constant, instead of describing the backbone as a list of coordinates, one can use the so-called torsion angles.
@@ -115,7 +115,7 @@ The bond between atom C and N in the protein backbone is a peptide bond that beh
 This means that for the construction of protein geometry one only requires two torsion angles: $\phi$ and $\psi$.
 
 Figure \ref{fig:ramachandran} a) shows a Ramachandran which describes the distribution of these two angles. 
-Most of the combinations of the two angles are not allowed due to overlapping atoms (ie. steric clashes) 
+Most of the combinations of the two angles are not allowed due to overlapping atoms (ie. steric clashes). 
 
 Since the secondary structure of a protein is defined as a "repetitive conformation of the residues and, ultimately, repetitive values of $\phi$ and $\psi$", the two basic secondary structure classes can be distinguished in the Ramachandran plot, with $\alpha$ helix having the distribution in lower left quadrant and $\beta$ sheets in the upper left quadrant (see Figure \ref{fig:ramachandran}). 
 Several other classes have been described and their location in the Ramachandran plot can be also localized. These will be described in more detail in the next section. 
@@ -130,18 +130,18 @@ Several other classes have been described and their location in the Ramachandran
 \section{Protein Folding}
 
 Protein folding refers to a process of post-translational arrangement of amino acids in the cytoplasm. 
-The purpose of this process is to create a favourable structure for performing a specific task which is dependent on the type of amino acid residues attached to the backbone. 
+The purpose of this process is to create a favorable structure for performing a specific task which is dependent on the type of amino acid residues attached to the backbone. 
 Proteins are created in cells all the time and the same sequence of amino acids should always result in the same folding process. 
 As illustrated in the introduction, the experimental inference of protein structure is both time and money consuming and due to the complexity of the problem, the computational methods can only create estimates of the structure.
 
-At the lowest level protein are composed of a sequence of amino acids. 
+At the lowest level proteins are composed of a sequence of amino acids. 
 These sequences then create three-dimensional folds, from which one can derive local repetitive regions - secondary structure \cite{dill}. 
 
 Proteins (or protein chains) can also be divided into smaller independently folding regions called domains. 
 Domains are responsible for some functionality or interaction with other molecules \cite{domains}.
 
 The main driving forces of protein folding are hydrophobic interactions. 
-Every amino acid can be classified either as hydrophilic/polar ("water liking") or hydrophobic. 
+Every amino acid can be classified as either hydrophilic/polar ("water liking") or hydrophobic. 
 The hydrophobic amino acids tend to orient themselves towards the core of the protein, while the polar amino acids are more likely to be oriented towards the surface.
 
 \subsection{Secondary structure}
@@ -169,7 +169,7 @@ The 8 classes of the DSSP algorithm are derived from the atom coordinates (see T
 \end{table}
 
 Since the secondary structure elements are stabilized by hydrogen bonds, the algorithm is based on recognition of hydrogen bonding patterns between the C-O bond of one residue and N-H bond of residue three to five residues away \cite{dssp2}. 
-A reclassification from 8 state to 3 state secondary structure is possible, where G, H and I are Helices, B and E are sheets and T, S, and - are coils. 
+A reclassification from 8 state to 3 state secondary structure is possible, where G, H and I are Helices, B, and E are sheets and T, S, and - are coils. 
 The state of the art performance of 3-state (Q3) secondary structure classifiers is $~84\%$, achieved by models based on neural networks. 
 For the 8 class classification, $71\%$ was achieved by an ensemble of 10 models, each of which consisted of a combination of convolutional and recurrent neural network layers \cite{dssp_sec}. 
 
@@ -178,15 +178,15 @@ For the 8 class classification, $71\%$ was achieved by an ensemble of 10 models,
 The tertiary structure of a domain/protein is the result of the folding process. 
 It is a 3-dimensional conformation of densely packed amino acids with free energy as low as possible. 
 As already stated above, this process is driven mainly by hydrophobic interactions. 
-Other forces that stabilize the structure are the hydrogen bonds (which give rise to the secondary structure elements), Van der Waals forces or disulfide bridges. 
-On top of this, several folding factors aid the process such as chaperones, oxidoreductases, glycan-binding protein and other \cite{principles_of_pf}.
+Other forces that stabilize the structure are the hydrogen bonds (which give rise to the secondary structure elements), Van der Waals forces, or disulfide bridges. 
+On top of this, several folding factors aid the process such as chaperones, oxidoreductases, glycan-binding protein, and other \cite{principles_of_pf}.
 
 \section{Current Approaches to (ab initio) protein folding}
 
 Deep learning has been showing great results and potential in a variety of applications since $\sim2012$, and the protein folding community noticed this (especially during CASP12 - 2016 and CASP13-2018). 
 However several very good performing methods were developed applying the laws of physics and molecular dynamics or clever search through libraries of fragmented parts of tertiary structures. 
-Due to the large number of unique discovered protein sequences, the evolutionary point of view can be applied to the problem by observing conserved pairs of sites. 
-In the last few years, the area of quantum computing has been developing showing great potential in variety of optimization tasks, protein folding included.%and there is a definite potential of using these methods for optimizing protein folds. 
+Due to a large number of unique discovered protein sequences, the evolutionary point of view can be applied to the problem by observing conserved pairs of sites. 
+In the last few years, the area of quantum computing has been developing showing great potential in a variety of optimization tasks, protein folding included.%and there is a definite potential of using these methods for optimizing protein folds. 
 The principle of these 4 methods will be sketched out in the following paragraphs.
 
 \subsection{Energy based methods}
@@ -196,11 +196,11 @@ The premise of the method is to use known physical laws and apply them to the fo
 However, although the promising idea, as shown in the introduction the complexity of the problem is just too large, to allow these methods to arrive at exact solutions.
 
 An example of an energy minimization method is the CSA protocol \cite{csa} (Conformational Space Annealing), which searches the vast conformational energy landscape. 
-The algorithm simultaneously optimizes several configurations, compares them against each other and saves the one with minimal energy.
+The algorithm simultaneously optimizes several configurations, compares them against each other, and saves the one with minimal energy.
 
 \subsection{Fragment Assembly}
 
-The principle of fragment assembly is to use fragments of known structure, stick them together and optimize some energy function. 
+The principle of fragment assembly is to use fragments of known structures, stick them together, and optimize some energy function. 
 Since entire fragments are used, the short-range interactions are not included in the energy function and only long-range interactions are of interest. 
 The final result is highly dependent on the choice of the energy function and the optimization procedure \cite{fragments}.
 
@@ -208,7 +208,7 @@ Pipelines of several teams competing at CASP are based on fragment assembly, e.g
 
 \subsection{Co-evolutionary features}
 
-Due to the large increase of sequenced primary protein structures, it is possible to look for pairwise amino acids correlations and use them to model the contacts or distances between residues.
+Due to the large increase of sequenced primary protein structures, it is possible to look for pairwise amino acid correlations and use them to model the contacts or distances between residues.
 Given a set of primary structures of proteins from different species, we should be able to construct clusters of proteins belonging to the same family (homologs). 
 These proteins are likely performing similar functions in different species and should have similar tertiary structures. 
 Given a random amino acid sequence we should be able to find similar sequences and construct the Multiple Sequence Alignment - MSA, inside of which we should observe linked sites (sites where the correlation of amino acids is far from random). 
@@ -270,16 +270,16 @@ The categories of the competition usually include:
 \end{itemize}
 
 Figure \ref{fig:casp} a) and b) shows the results of protein predictions in terms of two scores: GDT-TS (Global Distance Test - Total Score) and TM-Score (Template Modelling Score) in the last 6 CASP competitions. 
-For each competition, we extracted the best scores of best predictions for each domain, took their average and visualized the distribution with a boxplot.
+For each competition, we extracted the best scores of best predictions for each domain, took their average, and visualized the distribution with a boxplot.
 Both scores are percentages (with GDT-TS multiplied by 100) and rely on structural alignment. 
-The reason why simple mean squared distance is not favoured is because of its high sensitivity towards outliers. 
+The reason why simple mean squared distance is not favored is because of its high sensitivity towards outliers. 
 GDT-TS and TM-score account for this. 
 
-For calculation of GDT-TS, many different local superpositions are taken to detect similarities between the two structures \cite{gdt1}. 
-Scores below 30\% are considered random structures, scores above 50\% should have correct overall topology and structures with GDT-TS > 75\% are considered as good folds \cite{casp13}.
+For the calculation of GDT-TS, many different local superpositions are taken to detect similarities between the two structures \cite{gdt1}. 
+Scores below 30\% are considered random structures, scores above 50\% should have correct overall topology, and structures with GDT-TS > 75\% are considered as good folds \cite{casp13}.
 
 TM-score solves the outlier problem in a different way. 
-First, it puts more weight on small distance errors than large distance errors and second, it takes into account the length of the sequence. 
+First, it puts more weight on small distance errors than large distance errors, and second, it takes into account the length of the sequence. 
 Models with TM-scores lower than 0.17 are as good as random folds while models with TM-Score > 0.5 are considered as good folds \cite{tmscore}.
 
 During CASP11 the prediction accuracy decreased, which is likely a result of ambiguous domain splits and difficult classification of domains into the TBM and FM categories. 
@@ -287,7 +287,7 @@ Many domains with low sequence similarity but high structural similarity contain
 
 During CASP12 several teams adopted the idea (and showed its potential) of using contact maps to predict tertiary structure. 
 This resulted in great improvement, especially for harder targets in the Free Modelling category. 
-The (long range) contact precision increased from $\sim 27\%$ to $~47\%$ \cite{casp12}.
+The long range contact precision increased from $\sim 27\%$ to $~47\%$ \cite{casp12}. "Long-range" contacts are defined as contacts between residues that are at least 23 amino acids away in the primary structure. 
 
 Teams participating in CASP13 pushed this value to $70\%$, mainly due to the use of deep neural networks, with great dependence on the alignment depth. 
 Another advance came through the prediction of inter-residue distance maps, which were then used as constraints for structure optimization. 

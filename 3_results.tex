@@ -1,6 +1,6 @@
 \chapter{Results and Discussion}
 In this chapter, we describe and discuss the results of this project.
-In first section, we present implementation of the pipeline allowing us to transform the raw protein sequences from FASTA format into the input format of the neural network.
+In the first section, we present implementation of the pipeline allowing us to transform the raw protein sequences from FASTA format into the input format of the neural network.
 In the second section, we reveal the architectures of the networks used to predict the distograms of the proteins.
 We also discuss the experiments done to confirm the correctness of our implementations and compare different architectures.
 The last section is dedicated to constructing the 3D structure from these predicted distograms as well as comparison with two teams participating at CASP13.
@@ -10,14 +10,22 @@ The last section is dedicated to constructing the 3D structure from these predic
 \newpage
 \section{Inter-residue distance modelling}
 
-For the past couple years, one way of evaluating similarity between real and predicted structures, was to look at their contact maps. Residue-residue contact is a binary feature that describes whether the C$_\alpha$ (or C$_\beta$) atoms of two residues are closer to each other than 8\AA. Several softwares, such as CONFOLD2 \cite{confold, confold2} were developed to use the contact maps as constraints for structure modelling. The potential of using contact maps for modelling was shown on CASP12 and CASP13, where the contact precision reached ~47\% and ~70\% respectively (before, the average contact precision was between 20-30 \%). Although this progress, there is a limit on how good the predictions can be (the authors of CONFOLD2 report average TM-score of 0.57 \cite{confold2}). For this reason several teams on CASP13, AlphaFold included, decided to predicted inter-residue distance distributions and use them as constraints for structure optimization. This has shown a great potential, especially after noticing that AlphaFold was ranked first for many of the targets (including hard ones).
+For the past couple of years, one way of evaluating the similarity between real and predicted structures was to look at their contact maps. 
+Residue-residue contact is a binary feature that describes whether the C$_\alpha$ (or C$_\beta$) atoms of two residues are closer to each other than 8\AA. 
+Several software programmes, such as CONFOLD2 \cite{confold, confold2} were developed to use the contact maps as constraints for structure modelling. 
+The potential of using contact maps for modelling was shown on CASP12 and CASP13, where the long-range contact precision reached ~47\% and ~70\% respectively (before, the average contact precision was between 20-30 \%). 
+Although this progress, there is a limit on how good the predictions can be (the authors of CONFOLD2 report average TM-score of 0.57 \cite{confold2}). 
+For this reason several teams on CASP13, AlphaFold included, decided to predicted inter-residue distance distributions and use them as constraints for structure optimization. 
+This has shown great potential, especially after noticing that AlphaFold was ranked first for many of the targets (including hard ones).
 
-The reason behind the substantial increase in contact predictions is mainly due to the use of deep neural networks. Neural networks (thoroughly described in the methods section) are incredibly versatile family of models. Since our input and output were essentially 3 dimensional tensors, the convolutional networks are a reasonable architecture choice. 
+The reason behind the substantial increase in contact predictions is mainly due to the use of deep neural networks. 
+Neural networks (thoroughly described in the methods section) are a versatile family of models. 
+Since our input and output were essentially 3-dimensional tensors, the convolutional networks are a reasonable architecture choice. 
 
-In the next subsection we describe the main architecture of the network used for predicted distance histograms + auxiliary outputs together with description of 3 different modules that were tested. The second subsection describes the training strategy and third one evaluates the performance of the models.
+In the next subsection, we describe the main architecture of the network used for predicted distance histograms + auxiliary outputs together with a description of 3 different modules that were tested. 
+The second subsection describes the training strategy and the third one evaluates the performance of the models.
 
 \subsection{Neural Networks}
-% architectures (convnet, Alphafold, Inception), training, auxiliary losses, ...
 
 \begin{figure}
     \centering
@@ -26,44 +34,52 @@ In the next subsection we describe the main architecture of the network used for
     \label{fig:outputs}
 \end{figure}
 
-Before diving to the specifics of each module, we have to explain the overall/general architecture shared between the models (see Figure \ref{fig:architectures}a)). The first crucial thing to keep in mind, is to ensure that the dimensionality of the input does not change throughout the network, since our labels were 2D (binned) distance maps. This means that no pooling operations are allowed, only convolutions without changing the dimensionality. The layers inside the networks are thus essentially only of three types: convolutional (1x1, 3x3, 5x5, 64x1, dilated, ...), Batch norm and Elu/Relu layers. The only difference between the individual modules is in the number of these layers and their arrangement.
+Before diving to the specifics of each module, we have to explain the overall/general architecture shared between the models (see Figure \ref{fig:architectures}a)). 
+The first crucial thing to keep in mind is to ensure that the dimensionality of the input does not change throughout the network since our labels were 2D (binned) distance maps. 
+This means that no pooling operations are allowed, only convolutions without changing the dimensionality. 
+The layers inside the networks are thus essentially only of three types: convolutional (1x1, 3x3, 5x5, 64x1, dilated, ...), Batch norm and ELU/ReLU layers. 
+The only difference between the individual modules is in the number of these layers and their arrangement.
 
-In order for the input features to be roughly on the same scale, the first layer of the network is a Batch normalization one. As the number of channels in the input was 569, the second layer decreases this number by applying the 1x1 convolution. Its output is then fed through a series of modules (described more thoroughly in later paragraphs).
+For the input features to be roughly on the same scale, the first layer of the network is a Batch normalization one. 
+As the number of channels in the input was 569, the second layer decreases this number by applying the 1x1 convolution. 
+Its output is then fed through a series of modules (described more thoroughly in later paragraphs).
 
-The end of the network branches into two output heads: distogram head, which decreases the number of channels to 32 and auxiliary head that applies two convolution operations, to arrive at 2D input with 84 channels (9 channels for secondary structure, 37 channels for phi angle and 37 channels for psi angle) - see Figure \ref{fig:outputs}. The "$aux_j$" output was taken directly after applying the 64x1 convolution and $aux_i$ output was taken as a transpose of the same layer. In a way this created two auxiliary heads with shared weights. The entire architecture together with the modules described below is shown on Figure \ref{fig:architectures}.
+The end of the network branches into two output heads: distogram head, which decreases the number of channels to 32 and auxiliary head that applies two convolution operations, to arrive at 1D input with 84 channels (9 channels for secondary structure, 37 channels for phi angle and 37 channels for psi angle) - see Figure \ref{fig:outputs}. 
+The "$aux_j$" output was taken directly after applying the 64x1 convolution and $aux_i$ output was taken as a transpose of the same layer. 
+In a way, this created two auxiliary heads with shared weights. 
+The entire architecture together with the modules described below is shown in Figure \ref{fig:architectures}.
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/Architectures.png}
-    \caption{Neural Network architectures used in training. a) visualizes the diagram of the entire network; b) shows the AlphaFold block, c) is an Inception Resnet module (inspired by Inception module used in GoogleNet \cite{googlenet}) and d) is a simple Convolutional Network}
+    \caption{Neural Network architectures used in training. a) visualizes the diagram of the entire network; b) shows the AlphaFold block, c) is an Inception ResNet module (inspired by Inception module used in GoogleNet \cite{googlenet}) and d) is a simple Convolutional Network}
     \label{fig:architectures}
 \end{figure}
 
 \subsubsection{ConvNet}
 
-We begin with a simple convolutional network. The network consisted of 16 modules, each one applying a Batch Norm operation and a 5x5 convolution (with stride=1, padding=2, groups=1) - see Figure \ref{fig:architectures} d). This might not seem like a simple network, but the reasoning behind the number 16 follows from the definition of the local receptive field (LRF). LRF describes area of the input that is captured by a neuron in a convolutional layer. When successively applying the 5x5 convolutions, this area increases by 4 in each dimension (5x5, 9x9, 13x13, ...). Thus, since the size of the input was fixed at 64x64 (see cropping schemes in training section below), the minimal number of layers needed so that each neuron captures the entire input is 16.
+We begin with a simple convolutional network. The network consisted of 16 modules, each one applying a Batch Norm operation and a 5x5 convolution (with stride=1, padding=2, groups=1) - see Figure \ref{fig:architectures} d). This might not seem like a simple network, but the reasoning behind the number 16 follows from the definition of the local receptive field (LRF). LRF describes the area of the input that is captured by a neuron in a convolutional layer. When successively applying 5x5 convolutions, this area increases by 4 in each dimension (5x5, 9x9, 13x13, ...). Thus, since the size of the input was fixed at 64x64 (see cropping schemes in training section below), the minimal number of layers needed so that each neuron captures the entire input is 16.
 
-The number of channels inside the network was fixed at 128 and the activation function applied between modules was relu. All in all, the number of parameters of the network was 6,654,328.
+The number of channels inside the network was fixed at 128 and the activation function applied between modules was ReLU. All in all, the number of parameters of the network was 6,654,328.
 
 \subsubsection{AlphaFold}
 
-For notational purposes, we are going to distinguish three features of the network: the AlphaFold block, the Alphafold Module and AlphaFold network.
+For notation purposes, we are going to distinguish three features of the network: AlphaFold block, AlphaFold Module and AlphaFold network.
 
-The main feature of the alphafold resnet block (depicted on Figure \ref{fig:architectures}b)), are the dilated 3x3 convolutions. It begins with a Batch norm layer, followed by a 1x1 convolution layer decreasing the number of channels to one half. After applying another batch norm layer comes the dilated 3x3 convolution. The size of the dilation was picked from a list: \{1, 2, 4, 8\}. The block is concluded with a Batch norm layer followed project up layer, that restores the number of channels so that they can be added to the input. The activation function used between the layer was elu.
+The main feature of the AlphaFold (ResNet) block (depicted in Figure \ref{fig:architectures}b)), are the dilated 3x3 convolutions. It begins with a Batch norm layer, followed by a 1x1 convolution layer decreasing the number of channels to one half. After applying another batch norm layer comes the dilated 3x3 convolution. The size of the dilation was picked from a list: \{1, 2, 4, 8\}. The block is concluded with a Batch norm layer followed project up layer, that restores the number of channels so that they can be added to the input. The activation function applied after Batch Norm layer was ELU.
 
-The Alphafold module consisted of 4 Alphafold blocks cycling through 4 different dilations. We built two versions of AlphaFold network: one with 40 modules with number of channels = 128 and applying 3x3 convolutions with groups = 128, and another one with first 4 modules having 216 channels and then 32 modules with 128 channels applying convolutions with groups=1. In further text we will refer to the first network as Alphafold and second as Alphafold\_ZP (due to the cropping scheme strategy involving Zero Padding). 
+The AlphaFold module consisted of four AlphaFold blocks cycling through the four different dilations. We built two versions of AlphaFold network: one with 40 modules with the number of channels = 128 and applying 3x3 convolutions with groups = 128, and another one with first 4 modules having 216 channels and then 32 modules with 128 channels applying convolutions with groups=1. In the further text, we will refer to the first network as AlphaFold and second as AlphaFold\_ZP (due to the cropping scheme strategy involving Zero Padding). 
 
-All in all, the number of parameters in Alphafold was 3,639,928 and in Alphafold\_ZP 10,745,464. This difference is mainly the result of applying 3x3 convolutions in the blocks channel wise ($\Longleftrightarrow$ groups = channels).
+All in all, the number of parameters in AlphaFold was 3,639,928 and in AlphaFold\_ZP 10,745,464. This difference is mainly the result of applying 3x3 convolutions in the blocks channel-wise ($\Longleftrightarrow$ groups = channels).
 
 \subsubsection{Inception}
 
-The name of the Inception Network %suggests, that there is a network inside a network.
-comes from an architecture presented by team Google at ImageNet 2014, where it consisted of a "network of networks".
-This becomes more obvious after inspecting the Inception Resnet Module in Figure \ref{fig:architectures}c). GoogleNet (name of the entire model) won the competition while showing great potential of 1x1 convolutions.
+The name of the Inception Network comes from an architecture presented by team Google at ImageNet 2014, where it consisted of a "network of networks".
+This becomes more obvious after inspecting the Inception ResNet Module in Figure \ref{fig:architectures}c). GoogleNet (name of the entire model) won the competition while showing the great potential of 1x1 convolutions.
 
-The module starts off with a batch norm layer, than applies 1x1 convolutions and finally branches into four 3x3 dilated convolutions (dilations = \{1, 2, 4, 8\}) which are added in the end with the input. This step also makes it a Residual Network.
+The module starts with a batch norm layer, then applies 1x1 convolutions and finally branches into four 3x3 dilated convolutions (dilations = \{1, 2, 4, 8\}) which are added in the end with the input. This step also makes it a Residual Network.
 
-The activation function used in intermediate layers was elu and the number of channels was kept at 128.
+The activation function used in intermediate layers was ELU and the number of channels was kept at 128.
 
 The idea behind this module is to let the network to pick a "path" depending on the required level of detail. This way one can capture general variation while taking the path through more dilated convolutions while focusing on more details with smaller dilations \cite{nn_dl}.
 
@@ -71,58 +87,49 @@ The idea behind this module is to let the network to pick a "path" depending on 
 
 \subsubsection{Cropping}
 
-The cropping refers to a process in which % we sliced a region of the size
-a sliced region of shape $\text{crop\_size} \times \text{crop\_size}$ is extracted from the input of size $L \times L$. In our pipeline (as was done in AlphaFold) we used crops of size 64x64.
-These crops were then used for neural network training, as well as for predicting novel data. This step was necessary and beneficial for following reasons: 
+The cropping refers to a process in which a sliced region of shape $\text{crop\_size} \times \text{crop\_size}$ is extracted from the input of size $L \times L$. 
+In our pipeline (as was done in AlphaFold) we used crops of size 64x64.
+These crops were then used for neural network training, as well as for predicting novel data. This step was necessary and beneficial for the following reasons: 
 
-%The sliced region was then used to train the neural network.
-%This process served multiple purposes.
 \begin{enumerate}
     \item Independence from input size ($\Leftrightarrow$ domain length)
-    % It allowed us to use the network %across all proteins with differing lengths. 
-    % without caring about the size of the input ($\Leftrightarrow$ domain length).
 
-Although the convolution operation can be used on input of different sizes, one of the last steps in our networks was to predict auxiliary losses of secondary structure and torsion angles.
+Although the convolution operation can be used on the input of different sizes, one of the last steps in our networks was to predict auxiliary losses of secondary structure and torsion angles.
 For this, we needed to reduce the multiple 2D maps into 1D maps, which was achieved by applying convolution with kernel size $1 \times \text{crop\_size}$.
-%This meant to reduce the multiple 2D maps into multiple 1D maps.
-%For this purpose, we used the convolution with a kernel of size $1 \times \text{crop\_size}$.
 If it were not for the unified size of the input, we would need to use kernel size of $1 \times L$, which is different for all proteins and therefore we would not be able to reuse the same parameters for auxiliary loss prediction.
 
     \item Data augmentation
     
-During every epoch, the crops were randomly offsetted and then fed to the network. This means that for every iteration the network needs to predict certain region with slightly different input data at hand, which forces it to generalize better.
-% add some description why?
+During every epoch, the crops were randomly offset and then fed to the network. This means that for every iteration the network needs to predict certain region with slightly different input data at hand, which forces it to generalize better.
 
     \item Memory load and the time consumption decrease during training
     
-    
+Training of the network on proteins of size $L \times L$ would be problematic when the length $L$ is too big.
+The main limitation is the size of the VRAM of the GPU, which was limited to around 16GB. Training on the smaller crops allowed us to use GPU for training even for very long proteins.
 
-% add some description why?
-% add more advantages?
 \end{enumerate}
 
-%During the training, 
 We experimented with two cropping schemes.
 
 In the first cropping scheme, we only considered the inner crops.
-First we selected offsets $O_x, O_y$ for the x-axis and for the y-axis respectively. 
-This offsets were random integers from the interval $[0, 63]$.
+First, we selected offsets $O_x, O_y$ for the x-axis and the y-axis respectively. 
+These offsets were random integers from the interval $[0, 63]$.
 Then, we constructed crops across all domains loaded in RAM and across all channels of these domains.
 Position of these crops was from $O_x$ to $O_x + 64$ along the x-axis and from $O_y$ to $O_y + 64$ along the y-axis.
-If the crops were out of bounds of the domain ($O_x + 64 > L$ or $O_y + 64 > L$), then we discarded them as we did not consider them to be a valid crops.
+If the crops were out of bounds of the domain ($O_x + 64 > L$ or $O_y + 64 > L$), then we discarded them as we did not consider them to be valid crops.
 Next, we trained our model in batches of 8 valid crops at a time.
 Afterwards, we created another crops out of region from $O_x + 1 \cdot 64$ to $O_x + 1 \cdot 64 + 64$ along the x-axis and from $O_y + 0 \cdot 64$ to $O_y + 0 \cdot 64 + 64$.
-We continued the training and cropping along the x-axis until starting coordinate of x offset were smaller the the biggest length of the loaded domains.
+We continued the training and cropping along the x-axis until starting coordinate of x offset were smaller the biggest length of the loaded domains.
 Then, we shifted the crops along the y-axis, so the y offset was $O_y + 1 \cdot 64$.
 We continued this cropping process until we covered all inner crops of the longest domain.
 This cropping scheme is visualized in Figure \ref{fig:cropping} a).
 
-The second cropping scheme (visualized on Figure \ref{fig:cropping} b)) - also used by Alphafold, allows the crops to go "outside" of the input. The excess regions are represented with number 0 together with a label of the same number. The zero padding never exceeded length of 32, meaning that at least 32x32 region of the input was always included inside of the crop (the shape of crops was 64x64). The crops were non-overlapping and some degree of freedom (dependent on the size of the input) regarding the offset of the entire crop map (orange squares on Figure \ref{fig:cropping} b)) allowed us to feed the network with diverse data while training. The zero padding also allowed us to train on domain shorter than 64 residues, which is not possible with the first cropping scheme.
+The second cropping scheme (visualized on Figure \ref{fig:cropping} b)) - also used by AlphaFold, allows the crops to go "outside" of the input. The excess regions are represented with number 0 together with a label of the same number. The zero-padding never exceeded the length of 32, meaning that at least 32x32 region of the input was always included inside of the crop (the shape of crops was 64x64). The crops were non-overlapping and some degree of freedom (dependent on the size of the input) regarding the offset of the entire crop map (orange squares on Figure \ref{fig:cropping} b)) allowed us to feed the network with diverse data while training. The zero-padding also allowed us to train on domain shorter than 64 residues, which is not possible with the first cropping scheme.
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/cropping_schemes.png}
-    \caption{Two Cropping strategies used for training the networks. a) shows the cropping strategy used to train model named Alphafold, while the rest models (and also the original Alphafold \cite{alphafold}) used the second strategy b)}
+    \caption{Two cropping strategies used for training the networks. a) shows the cropping strategy used to train model named AlphaFold, while the rest models (and also the original AlphaFold \cite{alphafold}) used the second strategy b)}
     \label{fig:cropping}
 \end{figure}
 
@@ -130,16 +137,16 @@ The second cropping scheme (visualized on Figure \ref{fig:cropping} b)) - also u
 
 The training involved 3 stages: loading input data, cropping and applying gradient descent steps.
 
-It was not possible load all data in memory (the occupied space $\approx$ 1TB), so the data loading and training was performed on smaller chunks of the data. We loaded the input tensors in parallel, which increased the training speed substantially.
+It was not possible to load all data in memory (the occupied space $\approx$ 1TB), so the data loading and training was performed on smaller chunks of the data. We loaded the input tensors in parallel, which increased the training speed substantially.
 
-Then a bank of crops of sizes 64x64x569 was created which was fed to the network in batches of size 8. We used weighted negative log likelihood as the loss function to give more importance to the distance predictions than auxiliary losses. Formally:
+Then a bank of crops of sizes 64x64x569 was created which was fed to the network in batches of size 8. We used weighted negative log-likelihood as the loss function to give more importance to the distance predictions than auxiliary losses. Formally:
 
 \begin{equation}
     NLL = 10 \cdot NLL_{dist} + NLL_{sec_i} + NLL_{sec_j} + NLL_{\phi_i} + NLL_{\phi_j} + NLL_{\psi_i} + NLL_{\psi_j}
     \label{eq:NLLloss}
 \end{equation}
 
-The train loss was calculated on a set of domains used in training and validation loss on a held out set. 
+The training loss was calculated on a set of domains used in training and validation loss on a held-out set. 
 
 We saved intermediate models (after each epoch) and picked the one with lowest overall loss. 
 
@@ -152,18 +159,23 @@ We saved intermediate models (after each epoch) and picked the one with lowest o
     \label{fig:models_lddt}
 \end{figure}
 
-The model choice was performed on a validation set of 1000 domains, which were not used in training. Each domain was predicted by each model and its DlDDT score was calculated from the distograms (see Equation \ref{eq:dlddt}). The Figure \ref{fig:models_lddt} shows the results. 
+The model choice was performed on a validation set of 1000 domains, which were not used in training. 
+Each domain was predicted by each model and its DlDDT score was calculated from the distograms (see Equation \ref{eq:dlddt}). 
+The Figure \ref{fig:models_lddt} shows the results. 
 
-Our initial idea was to weigh the models according to these scores. However, since they were highly correlated, we abandoned the plan and only picked the best model. The AlphaFold (with cropping scheme number 1) performed best of all models, while the Inception architecture leads the Zero-Padding group ($\Leftrightarrow$ cropping scheme number 2). Thus, the domains larger than 63 residues were predicted with AlphaFold architecture (since first cropping scheme (Figure \ref{fig:cropping}a)) does not work with domains smaller than 64 residues), and the rest with Inception\_ZP. 
+Our initial idea was to weigh the models according to these scores. 
+However, since they were highly correlated, we abandoned the plan and only picked the best model. 
+The AlphaFold (with cropping scheme number 1) performed best of all models, while the Inception architecture leads the Zero-Padding group ($\Leftrightarrow$ cropping scheme number 2). 
+Thus, the domains larger than 63 residues were predicted with AlphaFold architecture (since first cropping scheme (Figure \ref{fig:cropping}a)) does not work with domains smaller than 64 residues), and the rest with Inception\_ZP. 
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/test_losses_distributions.png}
-    \caption{Test loss against domain lenth together with its distributions. The NLL loss is a weighted function composed of distogram loss and auxiliary losses - see Equation \ref{eq:NLLloss}. The grey line shows the boundary between random and non-random predictions}
+    \caption{Test loss against domain length together with its distributions. The NLL loss is a weighted function composed of distogram loss and auxiliary losses - see Equation \ref{eq:NLLloss}. The grey line shows the boundary between random and non-random predictions}
     \label{fig:test_losses}
 \end{figure}
 
-For a final evaluation of the model performance we used two test sets: one coming from the CATH database and then 13 domains from CASP13. Figure \ref{fig:test_losses} shows the distribution of overall losses for all CATH test domains together with domain length relationship. 
+For a final evaluation of the model performance, we used two test sets: one coming from the CATH database and then 13 domains from CASP13. Figure \ref{fig:test_losses} shows the distribution of overall losses for all CATH test domains together with domain length relationship. 
 
 We can safely conclude that our models were able to extract important features from the input and generate non-random outputs. The boundary between the random and non-random model can be calculated from Equation \ref{eq:NLLloss}:
 
@@ -172,27 +184,27 @@ $$- 10~log(1/32) + 2~log(1/9) + 4~log(1 / 37) \approx 53.45$$
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_andy/distograms/distance_maps_test_structures.png}
-    \caption{Comparison of ground truth and predicted distograms. We selected three proteins based on the calculated error made in their predictions. First row is a very good prediction of a protein 1vmgA00 with measured error 20.42. Only 5\% of the distograms achieved better accuracy. Second row is a prediction of protein 4mveA00 with median error amongst the test set. Third row is a prediction of protein 2l1iA00. 95\% of the errors from test set achieved better score. In all cases, the ground truth is displayed on the left and the predicted distograms on the right. The columns show the true distance map, prediction by neural network, distance map induced from 3D structure optimized by CONFOLD2 and Gradient Descents respectively.}
+    \caption{Comparison of ground truth and predicted distograms. We selected three proteins based on the calculated error made in their predictions. The first row is a very good prediction of a protein 1vmgA00 with measured error 20.42. Only 5\% of the distograms achieved better accuracy. The second row is a prediction of protein 4mveA00 with median error amongst the test set. The third row is a prediction of protein 2l1iA00. 95\% of the errors from the test set achieved a better score. In all cases, the ground truth is displayed on the left and the predicted distograms on the right. The columns show the true distance map, prediction by the neural network, distance map induced from 3D structure optimized by CONFOLD2 and Gradient Descents respectively.}
     \label{fig:distograms}
 \end{figure}
 
-This can be also seen on the predicted distance maps shown in Figure \ref{fig:distograms} where we picked three domains based on their loss. The columns show the real distance maps, prediction derived from Neural network and induced maps from folded 3D structures using 3rd party program CONFOLD2 and our own Gradient Descent based structure optimization (both described in more detail in next section). The first domain represents the fifth percentile of the loss distribution (only 5\% of domains had lower loss), middle is a median prediction and bottom represents the 95th percentile.
+This can be also seen on the predicted distance maps shown in Figure \ref{fig:distograms} where we picked three domains based on their loss. The columns show the real distance maps, prediction derived from Neural network and induced maps from folded 3D structures using 3rd party program CONFOLD2 and our Gradient Descent based structure optimization (both described in more detail in next section). The first domain represents the fifth percentile of the loss distribution (only 5\% of domains had a lower loss), the middle is a median prediction and bottom represents the 95th percentile.
 
-The first interesting point regarding the results is, that the prediction loss does not get worse for longer domains. This means, that the network was able to predict different regions of the distance maps, both on and off diagonal. The first argument for cropping the initial data was to achieve the domain length Independence which proved to be an important step.
+The first interesting point regarding the results is, that the prediction loss does not get worse for longer domains. This means, that the network was able to predict different regions of the distance maps, both on and off-diagonal. The first argument for cropping the initial data was to achieve the domain length independence which proved to be an important step.
 
-The second fact, although not as obvious as the first one, is suggested by the predicted and real distance maps in Figure \ref{fig:distograms}. Although not surprising, the network had troubles predicting finer features of the distance maps. The main patterns are almost always captured, but other than that, we observed that the network simply puts the rest of distances in the last bin (visualized as dark blue regions). One has to keep in mind, however, that input was essentially composed of amino acid correlations in the MSA. Thus highly correlated pairs should be easily extracted and so should the uncorrelated ones. The hard task is to fill in the void between those two extremes.
+The second fact, although not as obvious as the first one, is suggested by the predicted and real distance maps in Figure \ref{fig:distograms}. Although not surprising, the network had troubles predicting finer features of the distance maps. The main patterns are almost always captured, but other than that, we observed that the network simply puts the rest of distances in the last bin (visualized as dark blue regions). One has to keep in mind, however, that input was essentially composed of amino acid correlations in the MSA. Thus highly correlated pairs should be easily extracted and so should the uncorrelated ones. The hard task is to fill in the void between these two extremes.
 
-Third, the "random" predictions are not as random as expected. A few paragraphs above we presented a formula which puts a boundary between a random and a non-random prediction in terms of the NLL loss function. However, we observed that even predictions worse than the random boundary still looked somewhat similar to the reality. This can occur when the network is very sure about certain inter-residue distances and thus assigning them a high probability, while the true value is far away from the prediction. If this is the case, the prediction possesses far more true low probability bins which inflate the negative log likelihood function.
+Third, the "random" predictions are not as random as expected. A few paragraphs above we presented a formula which puts a boundary between a random and a non-random prediction in terms of the NLL loss function. However, we observed that even predictions worse than the random boundary still looked somewhat similar to reality. This can occur when the network is very sure about certain inter-residue distances and thus assigns them a high probability, while the true value is far away from the prediction. If this is the case, the prediction possesses far more true low probability bins which inflate the negative log-likelihood function.
 
 \section{Structure Realization}
 
-The last step of the pipeline uses the intermediate results predicted by the neural network to arrive at a three dimensional protein structure. In the first subsection we discuss a gradient descent based structure optimization developed by us, in the next section a third party software CONFOLD2 and finally the results. 
+The last step of the pipeline uses the intermediate results predicted by the neural network to arrive at a three-dimensional protein structure. In the first subsection, we discuss a gradient descent based structure optimization developed by us, in the next section a third party software CONFOLD2 and finally the results. 
 
 \subsection{Gradient Descent Based Structure Realization}
 
-Gradient descent is method for gradual optimization of parameters of a model with a goal of decreasing some loss function. By model we understand a set of mathematical operations that take as an input the parameters and generate an output. 
+Gradient descent is a method for gradual optimization of parameters of a model with a goal of decreasing some loss function. By model, we understand a set of mathematical operations that take as an input the parameters and generate an output. 
 
-In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second step of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids together with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure. The distributions of distances and torsion angles were used in the structure optimization algorithm to define a loss function and to create several random initial states of structures by sampling from the torsion angle distributions.
+In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second step of the pipeline, we used a neural network to predict 32 bin distance histogram for each pair of amino acids together with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure. The distributions of distances and torsion angles were used in the structure optimization algorithm to define a loss function and to create several random initial states of structures by sampling from the torsion angle distributions.
 
 Gradient descent is a widely used method in many machine learning algorithms, and the main optimization technique for Neural Networks (see Algorithm \ref{alg:gd}). The algorithm simply finds a direction in the space of parameters, in which the loss function decreases the fastest and moves in this direction. This is repeated many times until the process is stopped. Algorithm \ref{alg:strucreal_gd} sketches the steps of the optimization steps, which will be explained in the following paragraphs:
 
@@ -220,25 +232,25 @@ Gradient descent is a widely used method in many machine learning algorithms, an
 \end{algorithmic}
 \end{algorithm}
 
-In the first step we initialized a vector $\bm{V}$ which was used for implementing momentum. This is a simple idea the reuses gradient from previous iteration, where parameters do not longer change in the direction of the steepest descent, but the direction is altered (dependent on the momentum parameter $\mu$) by adding the vector pointing in the direction of the last gradient. The principle of momentum is visualized on Figure \ref{fig:momentum}.
+In the first step, we initialized a vector $\bm{V}$ which was used for implementing momentum. This is a simple idea the reuses gradient from the previous iteration, where parameters do not longer change in the direction of the steepest descent, but the direction is altered (dependent on the momentum parameter $\mu$) by adding the vector pointing in the direction of the last gradient. The principle of momentum is visualized in Figure \ref{fig:momentum}.
 
-The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von-Misses distribution to the histograms. Von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
+The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von Misses distribution to the histograms. Von Mises distribution is a continuous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
 $$\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$$ 
 where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
 The $\kappa$ parameter is called concentration ($\sim 1/\sigma^2$) and describes the dispersion and $\mu$ is the mean direction of the distribution \cite{vonmises}. 
 
-In the next step the algorithm enters a cycle which ends after specified number iterations. In the first step of each iteration the model of protein geometry is created from current torsion angles ($(\phi, \psi)$), which are the parameters of the model, and the coordinates of backbone + C$_\beta$ atoms are computed. Finally a distance matrix is computed between all C$_\beta$ atoms of all residues (C$_\alpha$ for glycine).
+In the next step, the algorithm enters a cycle which ends after specified number iterations. In the first step of each iteration, the model of protein geometry is created from current torsion angles ($\mathcal{G}(\phi, \psi)$), which are the parameters of the model. Then the coordinates of backbone + C$_\beta$ atoms are computed. Finally, a distance matrix is computed between all C$_\beta$ atoms of all residues (C$_\alpha$ for glycine).
 
 We used the distance distributions predicted by the neural network to define a loss function:
 
 \begin{equation}
-     V_{dist}(\mathcal{G}((\phi, \psi))) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
+     V_{dist}(\mathcal{G}((\phi, \psi))) = -\sum_{i} \sum_{j > i} log[\mathds{P} (d_{ij} | S, MSA(S))]
      \label{eq:dist_pot}
 \end{equation}
 
-which is a simple negative log-likelihood function. In order to calculate the loss at any inter-residue distance, we approximated the distance histograms with a normal distribution (scaled, so that its max probability is the same as for the particular distogram).
+which is a simple negative log-likelihood function. To calculate the loss at any inter-residue distance, we approximated the distance histograms with a normal distribution (scaled, so that its max probability is the same as for the particular distogram).
 
-The sixth step of the algorithm refers to a computation of the gradients, which thankfully is done automatically by pytorch by calling the \texttt{.backward} method. In order to avoid exploding gradients, we divided the gradients by their standard deviation before updating the parameters. This ensured that the gradients were roughly on the same scale throughout the algorithm interations, while preserving their orientations. In the 8th and 9th step the parameters are updated with the possibility of reusing previous gradients, by setting the momentum parameter $\mu > 0$.
+The sixth step of the algorithm refers to a computation of the gradients, which is thankfully done automatically by PyTorch by calling the \texttt{.backward} method. To avoid exploding gradients, we divided the gradients by their standard deviation before updating the parameters. This ensured that the gradients were roughly on the same scale throughout the algorithm interactions while preserving their orientations. In the 8th and 9th step, the parameters are updated with the possibility of reusing previous gradients, by setting the momentum parameter $\mu > 0$.
 
 \begin{figure}
     \centering
@@ -254,92 +266,83 @@ The sixth step of the algorithm refers to a computation of the gradients, which 
     \label{fig:distributions}
 \end{figure}
 
-In order to implement the model of protein geometry, one has to treat the distances between neighboring atoms in the backbone as constants, together with the angles of three consecutive backbone atoms. We analyzed coordinates of 50 randomly selected proteins and calculated these distances and angles; the results are shown in Figure \ref{fig:interresidue}. The means of the distributions were used in the creation of the protein geometry (except of the C$_\beta$ angle; however we used this as a proof of correctness).
+To implement the model of protein geometry, one has to treat the distances between neighbouring atoms in the backbone as constants, together with the angles of three consecutive backbone atoms. We analyzed coordinates of 50 randomly selected proteins and calculated these distances and angles; the results are shown in Figure \ref{fig:interresidue}. The means of the distributions were used in the creation of the protein geometry (except the C$_\beta$ angle; however, we used this as a proof of correctness).
 
-For a given structure we generated 1000 unique random initial states by sampling torsion angles from the von Mises distributions fitted to the histograms. The individual distributions are depicted on Figure \ref{fig:distributions}. From each angle distribution (right of the Figure \ref{fig:distributions}) one value was picked. The normal distance distributions (Figure \ref{fig:distributions} - middle) were used for the calculation of the loss function - see Equation \ref{eq:dist_pot}.
+For a given structure we generated 1000 unique random initial states by sampling torsion angles from the von Mises distributions fitted to the histograms. The individual distributions are depicted in Figure \ref{fig:distributions}. From each angle distribution (right of the Figure \ref{fig:distributions}) one value was picked. The normal distance distributions (Figure \ref{fig:distributions} - middle) were used for the calculation of the loss function - see Equation \ref{eq:dist_pot}.
 
-For each torsion angle initiation we let the algorithm run for 1000 iterations. However, after every 200 iterations the algorithm picked the best structure (according to the loss) and continued the optimization with decreased learning rate (by a factor of 10).
+For each torsion angle initiation, we let the algorithm run for 1000 iterations. However, after every 200 iterations, the algorithm picked the best structure (according to the loss) and continued the optimization with decreased learning rate (by a factor of 10).
 
 The initial parameters were chosen by visually exploring the learning curves of 3 random states. The grid search was composed of combination of parameters:
 
 $$learning~rate = [0.1, 0.05, 0.01. 0.005, 0.001]$$
 $$momentum = [0.1, 0.3, 0.5, 0.7, 0.9]$$
 
-In the end, we decided to use initial learning rate = 0.05 and momentum = 0.5. The idea behind these values was to let the algorithm "explore" the landscape in the first iterations, without getting stuck in some local optimum. The decreased learning rate after each iterations lets the structure optimize finer and finer elements of its geometry. This partly depicted on Figure \ref{fig:learning_curves}, where with small initial learning rate, the structure quickly gets to a local optimum from which it can not escape, due to the learning rate decay. A high learning (especially together with high momentum) is just too unstable and would require more iterations. 
+In the end, we decided to use initial learning rate = 0.05 and momentum = 0.5. The idea behind these values was to let the algorithm "explore" the landscape in the first iterations, without getting stuck in some local optimum. The decreased learning rate after each iteration lets the structure optimize finer and finer elements of its geometry. This partly depicted in Figure \ref{fig:learning_curves}, wherewith small initial learning rate, the structure quickly gets to a local optimum from which it can not escape, due to the learning rate decay. A high learning rate (especially together with high momentum) is too unstable and would require more iterations. 
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/learning_curves.png}
-    \caption{Example learning curves with of 3 different random initializations (drawed with different colors) with different initial hyper-parameters}
+    \caption{Example learning curves with 3 different random initializations (drawn with different colours) with different initial hyper-parameters}
     \label{fig:learning_curves}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.8\linewidth]{imgs_tomas/1vmg_ensemble.png}
-    \caption{An example of optimized structure of domain 1vmgA00 (length = 82). a) is the real (binned) distance map, b) is the distance map induced from the optimized structure and c) shows the predicted structure (green) aligned on real one (blue)}
+    \caption{An example of optimized structure of domain 1vmgA00 (length = 82). a) is the real (binned) distance map, b) is the distance map induced from the optimized structure and c) shows the predicted structure (green) aligned on the real one (blue)}
     \label{fig:1vmg}
 \end{figure}
 
-Although the algorithm works and the distance map of the optimized structure looks similar to reality (see Figure \ref{fig:1vmg}), its main disadvantage is that it does not punish entangled conformations (which can not occur in reality $\Leftrightarrow$ steric clashes). By entangled conformations we refer to cases when the bonds between different atom pairs cross each other. The reason for this phenomenon, is that the loss function only looks at the distance map which can not hold enough information about the structure (especially if it is not a perfect prediction). The authors of the Alphafold solved this issue by applying more complicated loss function with three terms:
+Although the algorithm works, and the distance map of the optimized structure looks similar to reality (see Figure \ref{fig:1vmg}), its main disadvantage is that it does not punish entangled conformations (which can not occur in reality $\Leftrightarrow$ steric clashes). By entangled conformations, we refer to cases when the bonds between different atom pairs cross each other. The reason for this phenomenon is that the loss function only looks at the distance map which can not hold enough information about the structure unless it is a perfect prediction. The authors of the AlphaFold solved this issue by applying more complicated loss function with three terms:
 
 \begin{equation}
     V(\phi, \psi) = V_{dist}^{ref}(\mathcal{G}(\phi, \psi)) + V_{torsion}(\phi, \psi) + V_{score2smooth}(\mathcal{G}(\phi, \psi))
     \label{eq:alphafold_potential}
 \end{equation}
 
-The first term is a distance potential similar to the one we used, but with an additional step of subtracting a reference distribution in the log part of the NLL loss. The reference distribution captures the inherent noise of the network and models the relationship between the output distributions and domain length + binary feature: is glycin or not.
+The first term is a distance potential similar to the one we used, but with an additional step of subtracting a reference distribution in the log part of the NLL loss. The reference distribution captures the inherent noise of the network and models the relationship between the output distributions and domain length + binary feature: is glycine or not.
 
-The second term is simple NLL function where the log probability is calculated from the von Mises distributions fitted to the angle histograms.
+The second term is a simple NLL function where the log probability is calculated from the von Mises distributions fitted to the angle histograms.
 
-Finally, the last term punishes the structure if steric clashes occur. This was the only function that AlphaFold team borrowed from the Rosetta commons modelling software \cite{rosettacommons}. On top of this, the authors of the AlphaFold did not use gradient descent for optimization but a more advanced method - L-BFGS (Limited memory Broyden–Fletcher–Goldfarb–Shanno) which is a method that resembles the second order optimization by estimating the Hessian matrix (matrix of second derivatives). The method does not pick directions where the loss function changes the fastest, but rather where the gradients change the fastest. This results in more reasonable steps and thus the convergence is usually reached in smaller number of steps. %The biggest downside of the method is that it is slow and tends to get stuck in saddle points of the loss function \cite{nn_dl}.
+Finally, the last term punishes the structure if steric clashes occur. This was the only function that AlphaFold team borrowed from the Rosetta commons modelling software \cite{rosettacommons}. On top of this, the authors of the AlphaFold did not use gradient descent for optimization but a more advanced method - L-BFGS (Limited memory Broyden–Fletcher–Goldfarb–Shanno) which is a method that resembles the second-order optimization by estimating the Hessian matrix (matrix of second derivatives). The method does not pick directions where the loss function changes the fastest, but rather where the gradients change the fastest. This results in more reasonable steps and thus the convergence is usually reached in a smaller number of steps.
 
-Due to lack of time, we omitted the last two terms of the potential together with the reference distribution and used only the distance potential and implemented only the simple gradient descent strategy. 
+In our implementation, we omitted the last two terms of the potential together with the reference distribution and used only the distance potential and implemented only the simple gradient descent strategy. An example of optimized structure is shown in Figure \ref{fig:1vmg} (green) aligned on a real structure (blue). 
 
-One option that fixes the steric clashes is to use The Rosetta modelling software, which offers the so called FastRelax protocol. 
+One option that fixes the steric clashes is to use The Rosetta modelling software, which offers the so-called FastRelax protocol. 
 FastRelax takes as an input a structure in \texttt{pdb} format and performs several steps of "relaxation", where the steric clashes are fixed and the free energy of the structure is minimized. 
-This is not the optimal solution, since the inter-residue distances that were optimized in the first step get slightly distorted, but the structure at least makes more sense on terms of molecular physics. 
+This is not the optimal solution since the inter-residue distances that were optimized in the first step get slightly distorted, but the structure at least makes more sense in terms of molecular physics. 
 Nevertheless, we found the program to be too strong (with its default values) because it changed the structure too much.
 Therefore, until we develop a better potential function we decided to use a third party software: CONFOLD2. 
-%we had to used a different software (CONFOLD2) where the optimization is based on satisfying contact map and secondary structure (Q3) constraints.
 
 \subsection{CONFOLD2}
 
-%Another approach we used for structure realization was CONFOLD2 software.
-%This software takes residue contacts and secondary structure of the protein as an input and produces 5 of the best protein folds.
-
-CONFOLD2 generates three dimensional folds while optimizing two constraints: residue-residue contact maps and three state secondary structure.
-%Therefore, we calculated the residue contacts from the distograms.
-%The probabilities of the first 11 bins were summed up to get a probability that the distance between residues $i$ and $j$ is less than 8 angstroms.
+CONFOLD2 generates three-dimensional folds while optimizing two constraints: residue-residue contact maps and three-state secondary structure.
 The contacts can be easily extracted from the distograms by summing the first 11 bins (with bin 0 excluded).
-If the resulting probability was more than 0.5, we assumed that the residues $i$ and $j$ are in contact.
+If the resulting probability was more than 0.5, we assumed that the residues $i$ and $j$ were in contact.
 The secondary structure was acquired from the auxiliary outputs of the neural network and converted from Q8 to Q3 format.
-%Consequently, it was converted from the Q8 format to the Q3 format, because this was the format required from CONFOLD2.
+The 3D structure modelling is performed in two stages:
 
-%The residue-residue contacts and the secondary structure information is used internally by CONFOLD2 to create constraints of the model.
-Then, the 3D structure modelling is performed in two stages:
-
-In the first stage, the constraints are used to create multiple different protein structures, which are then used to filter out unsatisfied constrains.
+In the first stage, the constraints are used to create multiple different protein structures, which are then used to filter out unsatisfied constraints.
 
 In the second stage, the remaining constraints are used to reconstruct the final models.
 
-According to Adhikari et al. \cite{confold}, this two stage modelling significantly improves the quality of the resulting 3D structure.
+According to Adhikari et al. \cite{confold}, this two-stage modelling significantly improves the quality of the resulting 3D structure.
 
 \subsection{Evaluation}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.6\linewidth]{imgs_tomas/test_tmscore.png}
-    \caption{TM-scores of structures generated from real contact maps and secondary structures (y axis) vs TM-scores of structures optimized from predicted contact maps and secondary structures.}
+    \caption{TM-scores of structures generated from real contact maps and secondary structures (y-axis) vs TM-scores of structures optimized from predicted contact maps and secondary structures.}
     \label{fig:test_tmscore}
 \end{figure}
 
-Even though the gradient descent based approach for structure optimization proved to work, we are still far away before being able to arrive at biologically and physically relevant structure. Thus, the structure for all test and CASP domains domains were only optimized with CONFOLD2. 
+Even though the gradient descent based approach for structure optimization proved to work, we are still far away before being able to arrive at biologically and physically relevant structure. Thus the structures for all test and CASP domains were only optimized with CONFOLD2. 
 
-Since CONFOLD2 generates 5 candidate structures for every domain, we calculate the TM-score for each and picked the best one for next analyses.
+Since CONFOLD2 generates 5 candidate structures for every domain, we calculated the TM-score for each and picked the best one for the next analyses.
 
-First we wanted to find out how far away our model is from the theoretical optimum. CONFOLD2 uses restricted information to arrive at the final structure (contacts + secondary structure), which unlikely captures the full intricacies of protein folding. Thus for every domain we generated structures from real contact maps and secondary structures. The plot between the theoretical maximum TM-score and TM-score derived from structures using predicted features is shown on Figure \ref{fig:test_tmscore}. In an ideal case all points would lie on the red dashed line as far to the right as possible. 
-An interesting observation is, that some structures using predicted features were more similar to real ones than the the ones derived from real features (points under the red dashed line). This shows that contacts are not sufficient for good structure prediction and more elaborate constraints are required for more stable results.
+First, we wanted to find out how far away our model is from the theoretical optimum. CONFOLD2 uses restricted information to arrive at the final structure (contacts + secondary structure), which likely does not capture the full intricacies of protein folding. Thus for every domain, we generated structures from real contact maps and secondary structures. The plot, between the theoretical maximum TM-score, and TM-score derived from structures using predicted features, is shown in Figure \ref{fig:test_tmscore}. In an ideal case, all points would lie on the red dashed line as far to the right as possible. 
+An interesting observation is, that some structures using predicted features were more similar to real ones than the ones derived from real features (points under the red dashed line). This shows that contacts are not sufficient for good structure prediction and more elaborate constraints are required for more stable results.
 
 \begin{figure}
     \centering
@@ -348,44 +351,43 @@ An interesting observation is, that some structures using predicted features wer
     \label{fig:contacts_sec}
 \end{figure}
 
-As the inputs to the CONFOLD2 are composed of contact maps and secondary structures we calculated the long range precision of the contact prediction and the accuracy of secondary structure classification. The distributions of these two metrics calculated on the test set are shown on Figure \ref{fig:contacts_sec}. Both mean values are on par with current state of the art approaches, as well as the 8 class secondary structure classification (mean accuracy $\sim 0.72 \pm 0.12$).
+As the inputs to the CONFOLD2 are composed of contact maps and secondary structures we calculated the long-range precision of the contact prediction and the accuracy of secondary structure classification. The distributions of these two metrics calculated on the test set are shown in Figure \ref{fig:contacts_sec}. Both mean values are on par with the current state of the art approaches, as well as the 8 class secondary structure classification (mean accuracy $\sim 0.72 \pm 0.12$).
 
 \section{Comparison with other methods}
-%\subsection{Distances}
-%\subsection{Structures}
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/long_range_casp13_tm_contacts_sec.png}
-    \caption{Performance of our Pipeline (NN + CF2) against team Alphafold and RaptorXcontact for selected targets used in CASP13. Structures with TMScores less than 0.17 (red dashed line) are not better than random folds while structures with TMscore > 0.5 (green dashed line) should have similar overall topology the real structure. The red dots represent Long range contact precision (|i - j| > 23) and blue dots accuracy of secondary structure prediction}
+    \caption{Performance of our Pipeline (NN + CF2) against team AlphaFold and RaptorXcontact for selected targets used in CASP13. Structures with TM-scores less than 0.17 (red dashed line) are not better than random folds while structures with TM-score > 0.5 (green dashed line) should have similar overall topology the real structure. The red dots represent long-range contact precision (|i - j| > 23) and blue dots accuracy of secondary structure prediction}
     \label{fig:casp_performance}
 \end{figure}
 
-We donwloaded 13 domains from CASP13 from the regular targets category, to see how our structure prediction compares to the Alphafold and RaptorXcontact. We chose Alphafold because our pipeline was heavily inspired by their and RaptorXcontact because it uses software similar to CONFOLD2 to arrive at final 3D structures. We calculated the TM-score of each domain together with the long range contact precision and secondary structure accuracy. The results are shown in Figure \ref{fig:casp_performance}. For 3 domains there were no predicted long range contacts and thus the precision could not be calculated.
+We downloaded 13 domains from CASP13 from the regular targets category, to see how our structure prediction compares to the AlphaFold and RaptorXcontact. We chose AlphaFold because our pipeline was heavily inspired by their approach, and RaptorXcontact because it uses software similar to CONFOLD2 to arrive at final 3D structures. We calculated the TM-score of each domain together with the long-range contact precision and secondary structure accuracy. The results are shown in Figure \ref{fig:casp_performance}. For 3 domains there were no predicted long-range contacts and thus the precision could not be calculated.
 
-Our method can not compete with current best approaches. Almost all optimized structures (except of targets \texttt{T1005-D1} and \texttt{T1016-D1}) had TM-score lower than 0.5, which is considered as a rough boundary between good and insufficient fold. However there are several reasons for the poor results.
+Our method can not compete with the current best approaches. Almost all optimized structures (except targets \texttt{T1005-D1} and \texttt{T1016-D1}) had TM-score lower than 0.5, which is considered as a rough boundary between good and insufficient fold. However, there are several reasons for the poor results.
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/tm_vs_neff.png}
-    \caption{TM score vs Number of Effective homologs (Neff) in the MSA. Grey points represent the domains from test set; red points are the CASP13 targets}
+    \caption{TM-score vs Number of Effective homologs (NEFF) in the MSA. Grey points represent the domains from test set; red points are the CASP13 targets}
     \label{fig:tm_vs_neff}
 \end{figure}
 
-First is the direct implication of relying on MSA to construct input features. If the sequence search fails to find enough homologs in the database, the resulting MSA is of low quality. However, even if there  might be enough sequences, the overall information content of the MSA can be low if the data is not diverse enough. NEFF is a metric that measures the amount of homologous information for a protein or ,in other words, the amount of non redundant information in the MSA \cite{neff}. We extracted the NEFF from the HH-Blits search and plotted it against the TM-score both for test and CASP domains. Figure \ref{fig:tm_vs_neff} shows the relationship.
+First is the direct implication of relying on MSA to construct input features. If the sequence search fails to find enough homologs in the database, the resulting MSA is of low quality. However, even if there might be enough sequences, the overall information content of the MSA can be low if the data is not diverse enough. NEFF is a metric that measures the amount of homologous information for a protein\cite{neff}.
+We extracted the NEFF from the HH-Blits search and plotted it against the TM-score both for test and CASP domains. Figure \ref{fig:tm_vs_neff} shows the relationship.
 
 The majority of CASP domains we evaluated had low NEFF. The network thus had troubles extracting relevant information from the input. An example of distance maps for two targets (T0958-D1 with NEFF = 30.7 and T1016-D1 with NEFF=1157) is shown on Figure \ref{fig:casp_distmaps}.
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{imgs_tomas/casp_distance_maps_test_structures.png}
-    \caption{Distance maps of two targets from CASP13, similar to Figure \ref{fig:distograms}. For the first domain the sequence search algorithm (HHblits) only found 43 sequences from which it "constructed" the MSA (the effective number of homologs $Neff \approx 30.7$).  Unsurprisingly the neural network had a hard time and CONFOLD2 could not do much to fix this. b) shows a different scenario, when the number of sequences in MSA was adequate (1039, with $Neff \approx 1157$) and so was the neural network prediction. After CONFOLD2 folded the structure, the distance map looks even more similar to reality than predicted one}
+    \caption{Distance maps of two targets from CASP13, similar to Figure \ref{fig:distograms}. For the first domain, the sequence search algorithm (HHblits) only found 43 sequences from which it "constructed" the MSA (the effective number of homologs $Neff \approx 30.7$).  Unsurprisingly the neural network had a hard time and CONFOLD2 could not do much to fix this. b) shows a different scenario, when the number of sequences in MSA was adequate (1039, with $Neff \approx 1157$) and so was the neural network prediction. After CONFOLD2 folded the structure, the distance map looks even more similar to reality than predicted one}
     \label{fig:casp_distmaps}
 \end{figure}
 
 Even if the NEFF is large, the optimization can be still hard if the domain is long. This was likely the case of \texttt{T1003-D1} which is 434 residues long. 
 
-And finally, a folded structure of \texttt{T1016-D1} together with its label is shown on Figure \ref{fig:T1016}. The fold was visualized with PyMOL \cite{pymol} software while the alignment was performed by TM-align \cite{tmalign}.
+A folded structure of \texttt{T1016-D1} together with its label is shown on Figure \ref{fig:T1016}. The fold was visualized with PyMOL \cite{pymol} software while the alignment was performed by TM-align \cite{tmalign}.
 
 \begin{figure}
     \centering
@@ -397,42 +399,47 @@ And finally, a folded structure of \texttt{T1016-D1} together with its label is 
 \section{Potential improvements}
 
 \subsection{Regarding Input Data}
-what to do when the protein does not have enough similar sequences in the database?
-NEFF
+One of the potential drawbacks of the method used in this project is the strong dependence on the Number of effective homologs in the MSA.
+We saw that the accuracy of the models drops significantly when the NEFF is too low.
+One possible solution to this problem might be to increase the thresholds used in MSA creation - therefore increasing the number of sequences included in MSA.
+The impact of this solution is not obvious.
+On one side, the increased number of sequences in MSA could bring new information useful during the consecutive steps, but on the other side, we might introduce sequences with weak biological relevancy and therefore decrease the signal-to-noise ratio.
+Further tuning of this parameter could be an interesting way of research.
 
-PLMC might not converge. What are the reasons for this and how should we handle it.
+During the input creation, we noticed that in some cases the plmc program had problems to converge to a solution.
+We set the number of iterations used in this program to 500, which was sufficient for most of the proteins, but we think that waiting longer could provide a more accurate Potts models for long and complex proteins.
 
-Optimization of the input pipeline is needed.
-HHblits and Psiblast both do a sequence search and MSA.
-Ideally we would like to do this just once and then from MSA compute the PSSM and potts models.
-Although it might be beneficial to do it like it is, because the input features will be less correlated to each others.
-
-It might be beneficial to include calculated limits of the physical distance of 2 aminoacids.
-For example, we know that 2 aminoacids next to each other are 3.8A away.
-Similarly, 2 aminoacids at position $i$ and $i+2$ are ???5.6???A away.
-For position $i$ and $i+3$ this starts t be interesting, but calculating the maximum distance and the minimum distance should be relatively easy.
-
-Refactoring pipeline to be truly reproducible.
-
-Using more covariance data modelling approaches, not just PSSM and potts, but also PSICOV and Bayesian networks.
+Another thing to consider in the pipeline is the two methods for MSA creation.
+HHblits and Psiblast, both perform the sequence search and MSA construction as a part of their process.
+As we argued, this can be an advantage in our case, because the MSAs created are not optimal.
+However, if the tuned MSA would be used, it would make sense to use the same MSA for creation of Potts models and PSSM profiles.
+It might be also beneficial to include other approaches of data covariance modelling, such as PSICOV or Bayesian networks in addition to Potts models and PSSM.
 
 \subsection{Regarding Neural Networks}
-Neural networks could be modified to predict parameters of some distribution of distances.
-In currect setting we are predicting distrogram characterized by 32 numbers.
-If we would be able to identify some reasonable parametric distribution for distances, these could be used instead of the distrogram, reducing the number of parameters of the network and making the formulation closer to some theoretical formulation related to protein than very general.
+Currently, the neural network is predicting distograms with 32 bins, which represent the distribution of the distances.
+One possible improvement might be to predict the parameters of some parametric distribution instead.
+This would require to identify a parametric distribution, which approximates the reality well enough.
+This would allow us to skip the step of approximating a smooth function from the bins and model the smooth curve directly.
 
-Use accumulating gradients. This would allow to train on bigger batches than is the memory limit of the GPU and also would allow to train on multiple GPUs.
-% https://medium.com/huggingface/training-larger-batches-practical-tips-on-1-gpu-multi-gpu-distributed-setups-ec88c3e51255
+Furthermore, it might be beneficial to include analytically calculated limits of the physical distance of 2 amino acids.
+To illustrate, let us imagine 2 amino acids at positions $i$ and $j$ in the sequence.
+If $j = i+1$, then we know that the distance of $C_{\alpha}$ of these two amino acids is approximately 3.8\AA.
+For $j = i+2$, the distance is approximately 5.6\AA.
+For $j = i+3$, the distance is not constant anymore and depends on the torsion angles, but the lower bound and upper bound could be calculated analytically.
+This could put a further constraint to our model and potentially improve accuracy.
+
+Moreover, the training process could use the accumulating gradient, which would allow training of the model on batches bigger than the memory limit of the GPU.
+The training on multiple GPUs could be implemented as well to further increase the training speed.
 
 \subsection{Regarding Structure Realization}
 
-The contact based structure realization proved to work and in many cases lead to a good overall topology. However, for more precise prediction additional information needs to be used. Our distance based algorithm worked, however due to insufficient constraints was unable to find physically favorable structures. There are at least two obvious problems that need to be addressed:
+The contact-based structure realization proved to work and in many cases led to a good overall topology. However, for more precise predictions additional information needs to be used. Our distance-based algorithm worked, however, due to insufficient constraints was unable to find physically favourable structures. There are at least two obvious problems that need to be addressed:
 
 First are the steric clashes. A way to approach this might be by adding a steric repulsion term to the potential. Rosetta \cite{rosetta} uses a simple equation
 
 $$steric~repulsion~=\sum_{i} \sum_{j > i} \frac{(r_{ij}^2 - d_{ij}^2) ^ 2}{r_{ij}}; d_{ij} < r_{ij}$$
 
-where $r_{ij}$ is a sum of van der Waals radii for two atoms on different residues and $d_{ij}$ is the distance between them. The van der Walls radii are constants and can be easily found (eg. N: 1.55\AA, C: 1.7\AA, H: 1.2\AA, O: 1.52\AA )\cite{vdw_radii}.
+where $r_{ij}$ is a sum of van der Waals radii for two atoms on different residues and $d_{ij}$ is the distance between them. The van der Walls radii are constants and can be easily found (e.g. N: 1.55\AA, C: 1.7\AA, H: 1.2\AA, O: 1.52\AA )\cite{vdw_radii}.
 
-Another issue are torsion angles outside of the Ramachandran distribution. One way to tackle this might be by approximating the distribution with a smooth curve. Then a simple NLL likelihood function can be used as another term in the potential. The important thing is to not punish combinations of torsion angles inside of the distributions, only the ones outside. 
+Another is torsion angles outside of the Ramachandran distribution. One way to tackle this might be by approximating the distribution with a smooth curve. Then a simple NLL likelihood function can be used as another term in the potential. The important thing is to not punish combinations of torsion angles inside of the distributions, only the ones outside. 
 Since secondary structure classes can be identified in the clusters of Ramachandran distribution, it should be possible to also use this information to add more constraints. Furthermore, it has been shown that each amino acid has its own unique Ramachandran distribution \cite{rama_aa}, so this could also lead to a sensible potential function.

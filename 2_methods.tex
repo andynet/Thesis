@@ -123,13 +123,13 @@ It will ensure that the probabilities in the PPM will be non-zero and it also ac
     \label{fig:potts_example}
 \end{figure}
 
-The Potts model describes a probability distribution derived from a Multiple Sequence Alignment for any sequence of given constant length. The function has only two parameters: one describing the propensities of symbols in MSA (similar to the PSSM) and one describing pairwise interactions of symbols. For very short sequences the Potts model can be calculated exactly. However this is not feasible in practice, which means that one must resort to gradient descent based techniques. 
+A Potts model describes a probability distribution derived from a Multiple Sequence Alignment for any sequence of given constant length. The function has only two parameters: one describing the propensities of symbols in MSA (similar to the PSSM) and one describing pairwise interactions of symbols. For very short sequences the Potts model can be calculated exactly. However, this is not feasible in practice, which means that one must resort to gradient descent based techniques. 
 
-The most difficult part for finding Potts Model parameters is to ensure that the probabilities for all sequences sum to one. For this one would need to calculate the value of Potts Model function for all sequences of some length composed of symbols from given alphabet. For example for sequence length of 10 and alphabet of size 21 (number of amino acids + gap), there are $10^{21}$ unique sequences.
+The most difficult part for finding Potts Model parameters is to ensure that the probabilities for all sequences sum to one. For this one would need to calculate the value of Potts Model function for all sequences of some length composed of symbols from the given alphabet. For example for sequence length of 10 and alphabet of size 21 (number of amino acids + gap), there are $10^{21}$ unique sequences.
 
-An example of Potts model for sequence of length 3 composed of symbols from Alphabet \{A, B, C\} is shown on Figure \ref{fig:potts_example}.
+An example of a Potts model for a sequence of length 3 composed of symbols from Alphabet \{A, B, C\} is shown in Figure \ref{fig:potts_example}.
 
-Here one can simply calculate the frequencies and connected frequencies of amino acids in the MSA and then calculate the corresponding Potts Model values (described in more detail in next section). The sum of all these values acts as a normalizing constant for the final model (also called a partition function in later description). 
+Here one can simply calculate the frequencies and connected frequencies of amino acids in the MSA and then calculate the corresponding Potts Model values (described in more detail in the next section). The sum of all these values acts as a normalizing constant for the final model (also called a partition function in the later description).
 
 \subsubsection{Potts Models formalized}
 Let us assume that we have a sequence $\boldsymbol{\sigma} = (\sigma_1, \sigma_2, ..., \sigma_L)$, where $L$ is the length of the multiple sequence alignment. 
@@ -232,46 +232,34 @@ In the following sections, we will describe how we tackled the protein geometry 
 
 \subsection{Torsion Angles to Coordinates}
 
-% \begin{figure}
-%     \centering
-%     % \includegraphics[scale=0.27]{imgs_tomas/torsion.png}
-%     \includegraphics[width=\linewidth]{imgs_tomas/torsion.png}
-%     \caption{Torsion Angles - planes and inter-atom distance and angles notation}
-%     \label{fig:torsion}
-% \end{figure}
-
-% Torsion angle, or a dihedral angle, is an angle defined by two intersecting planes. A protein is essentially composed of a sequence of aminoacids, where every aminoacid contains atoms N, C$_\alpha$ and C and almost all (except of glycine) contain a C$_\beta$ atom with a residue.
-% The C$_\beta$ has a bond with the C$_\alpha$ atom - Figure \ref{fig:backbone} depicts the individual atoms of the backbone together with C$_\beta$ atom.
-
-% Since there are three atoms in the backbone, we can define three pairs of intersecting planes and thus define the three torsion angles (Figure \ref{fig:torsion}). Knowing the position of three preceding atoms, the torsion angle $\phi$ defines the position of the next C atom, the torsion angle $\psi$ defines the position of the next N atom and finally $\omega$ defines the position of the next C$_\alpha$ atom. The bond between atom C and N in the protein backbone is a peptide bond that behaves similarly to a double bond and is almost always equal to 180\degree~(trans isomerism; 0\degree~for cis configuration).
-
-Seeing that essentialy each torsion angle defines a position of an atom in relation to the previous three atoms in the structure, which are placed in a single plane, we can simplify the problem to follwing steps:
+Seeing that essentially each torsion angle defines a position of an atom in relation to the previous three atoms in the structure, which are placed in a single plane, we can simplify the problem to following steps:
 
 \begin{enumerate}
-    \item Place the atom in the same plane as the previous three atoms, satisfying the inter-atom angles and distances (eg. for placing atom N$_1$, we need to know position of N$_0$, C$_{\alpha 0}$ and C$_0$ and angles NC$_\alpha$C and C$_\alpha$CN).
+    \item Place the atom in the same plane as the previous three atoms, satisfying the inter-atom angles and distances (e.g. for placing atom N$_1$, we need to know the position of N$_0$, C$_{\alpha 0}$ and C$_0$ and angles NC$_\alpha$C and C$_\alpha$CN).
     
-    \item Define a vector $\bm{v}$ as the difference between the coordinates of the new atom and the last atom in the structure (eg. $\bm{v} = $N$_1$ - C$_0$).
+    \item Define a vector $\bm{v}$ as the difference between the coordinates of the new atom and the last atom in the structure (e.g. $\bm{v} = $N$_1$ - C$_0$).
     
-    \item Define a unit vector $\bm{k}$ around which the vector $\bm{v}$ will be rotated. This vector lies at the intersection of the two planes (eg. $\bm{k} = \frac{\textrm{C}_0 - \textrm{C}_{\alpha 0}}{d_{\textrm{C}_{\alpha} \textrm{C}}}$)
+    \item Define a unit vector $\bm{k}$ around which the vector $\bm{v}$ will be rotated. This vector lies at the intersection of the two planes (e.g. $\bm{k} = \frac{\textrm{C}_0 - \textrm{C}_{\alpha 0}}{d_{\textrm{C}_{\alpha} \textrm{C}}}$)
     
     \item Rotate the vector $\bm{v}$ around an axis with unit vector $\bm{k}$ and move it by adding the coordinates of the last atom in the structure
 \end{enumerate}
 
-These steps will be described in further detail in following section. Figure \ref{fig:bond_rotation} visualizes the steps except of the vector translocation.
+These steps will be described in further detail in the following section. 
+Figure \ref{fig:bond_rotation} visualizes the steps except of the vector translocation.
 
-% !!! REDO !!!
 \begin{figure}
     \centering
-    \includegraphics[scale=0.28]{imgs_tomas/rodrigues_backbone.png}
+    \includegraphics[width=\linewidth]{imgs_tomas/rodrigues_backbone.png}
     \caption{Torsion angle rotation as vector rotation}
     \label{fig:bond_rotation}
 \end{figure}
 
 \subsection{Background - Vector Cross-product}
 
-The cross product $\bm{v} \times \bm{w}$ of two 3D vectors is a vector pointing to a direction perpendicular to both vectors (decided by the right hand rule, where if $\bm{v}$  is represented by a thumb and $\bm{w}$ as index finger, than the direction is given by the middle finger). The size of this vector is equivalent to the area of the parallelogram with sites of sizes $||\bm{v}||$ and $||\bm{w}||$.
+The cross product $\bm{v} \times \bm{w}$ of two 3D vectors is a vector pointing to a direction perpendicular to both vectors (decided by the right-hand rule, where if $\bm{v}$  is represented by a thumb and $\bm{w}$ as index finger, then the direction is given by the middle finger). 
+The size of this vector is equivalent to the area of the parallelogram with sites of sizes $||\bm{v}||$ and $||\bm{w}||$.
 
-Formally the cross-product is a determinant of a special matrix with first column being the unit vectors $u_x$, $u_y$ and $u_z$ of the cartesian coordinate system and the rest are vectors $\bm{v}$ and $\bm{w}$:
+Formally the cross-product is a determinant of a special matrix with the first column being the unit vectors $u_x$, $u_y$ and $u_z$ of the Cartesian coordinate system and the rest are vectors $\bm{v}$ and $\bm{w}$:
 
 $$\bm{v} \times \bm{w} = det
 \left(
@@ -286,14 +274,8 @@ $$
 where $\alpha$ is the angle between the two vectors and $\bm{n}$ is the unit normal vector perpendicular to both vectors.
 
 \subsection{Background - Vector Dot-product}
-% \begin{figure}
-%     \centering
-%     \includegraphics[scale=0.23]{imgs_tomas/vector_ops.png}
-%     \caption{Visual demonstration of vector cross-product - a) and scalar/dot product - b)}
-%     \label{fig:vector ops}
-% \end{figure}
-
-The dot product $\bm{k} \cdot \bm{v}$ is an operation that projects vector $\bm{v}$ onto a line defined by vector $\bm{k}$ and then scales the projection by the size of vector $\bm{k}$. In the special case when $\bm{k}$ is a unit vector, the result is a simple projection. Formally:
+The dot product $\bm{k} \cdot \bm{v}$ is an operation that projects vector $\bm{v}$ onto a line defined by vector $\bm{k}$ and then scales the projection by the size of vector $\bm{k}$. 
+In the special case when $\bm{k}$ is a unit vector, the result is a simple projection. Formally:
 
 $$\bm{k} \cdot \bm{v} = ||\bm{k}||~||\bm{v}||~cos(\alpha) = k_x v_x + k_y v_y + k_z v_z$$
 
@@ -304,11 +286,13 @@ where $\alpha$ is the angle between the two vectors.
 \begin{figure}
     \centering
     \includegraphics[scale=3]{imgs_tomas/rodrigues_3d2d.png}
-    \caption{Caption}
+    \caption{Vectors describing vector rotation operations}
     \label{fig:rodrigues3d2d}
 \end{figure}
 
-Lets assume that there is a vector $\bm{v}$ and a vector $\bm{k}$. Our task is to find vector $\bm{v_{rot}}$ which is a rotated version of vector $\bm{v}$ around a line defined by vector $\bm{k}$. Figure \ref{fig:rodrigues3d2d} depicts all the vectors and operations used in the following paragraphs.
+Lets assume that there is a vector $\bm{v}$ and a vector $\bm{k}$. 
+Our task is to find vector $\bm{v_{rot}}$ which is a rotated version of vector $\bm{v}$ around a line defined by vector $\bm{k}$. 
+Figure \ref{fig:rodrigues3d2d} depicts all the vectors and operations used in the following paragraphs.
 
 The first step is to redefine the coordinate system in terms of 3 unit vectors: one is vector $\bm{k}$, second is a vector perpendicular to both $\bm{k}$ and $\bm{v}$: $\bm{n} = \frac{\bm{k} \times \bm{v}}{||\bm{k} \times \bm{v}||}$ and third a vector perpendicular to both $\bm{n}$ and $\bm{k}$: $\bm{m} = \bm{n} \times \bm{k}$.
 
@@ -319,13 +303,14 @@ The first step is to redefine the coordinate system in terms of 3 unit vectors: 
     
     \item "$\bm{n}$ axis"
     
-    The amount by which we need to scale the unit vector $\bm{n}$ is the $sin(\theta)$ multiplied by the radius of the circle in the Figure \ref{fig:rodrigues3d2d}. The radius of the circle is a dot product of vector $\bm{m}$ and the initial vector $\bm{v}$.
+    The amount by which we need to scale the unit vector $\bm{n}$ is the $sin(\theta)$ multiplied by the radius of the circle in Figure \ref{fig:rodrigues3d2d}. The radius of the circle is a dot product of vector $\bm{m}$ and the initial vector $\bm{v}$.
+    
     \item "$\bm{m}$ axis"
     
     The same reasoning as above, but this time the radius has to be multiplied by the cosine of $\theta$.
 \end{enumerate}
 
-All together, the rotational formula is:
+Altogether, the rotational formula is:
 
 \begin{equation}
     v_{rot} = \bm{k}(\bm{k} \cdot \bm{v}) + \bm{n} (\bm{m} \cdot \bm{v}) sin(\theta) + \bm{m} (\bm{m} \cdot \bm{v}) cos(\theta)
@@ -333,82 +318,29 @@ All together, the rotational formula is:
 \end{equation}
 
 \subsection{Beta carbon atom placement}
-% $C_{\beta}$
 
 \begin{figure}
     \centering
-    % \includegraphics[scale=0.25]{imgs_tomas/cbeta.png}
     \includegraphics[width=\linewidth]{imgs_tomas/cbeta.png}
     \caption{C$_\beta$ atom placement}
     \label{fig:cbeta}
 \end{figure}
 
-To place the C$_{beta}$ we used the rotational formula \ref{eq:rotformula} but the vectors $\bm{v}$ and $\bm{k}$ had to be computed from the coordinates. If vector $\bm{v}_{C_\alpha N}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the N atom and $\bm{v}_{C_\alpha C}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the C atom, then the vectors $\bm{v}$ and $\bm{k}$ are:
+To place the C$_{beta}$ we used the rotational formula \ref{eq:rotformula} but the vectors $\bm{v}$ and $\bm{k}$ had to be computed from the coordinates. 
+If vector $\bm{v}_{C_\alpha N}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the N atom and $\bm{v}_{C_\alpha C}$ is a unit vector in the same direction as the bond between the C$_\alpha$ atom and the C atom, then the vectors $\bm{v}$ and $\bm{k}$ are:
 
 $$\bm{v} = \bm{v}_{C_\alpha N} \times  \bm{v}_{C_\alpha C}, ~~ \bm{k} = \frac{\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}}{||\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}||}$$
 
 The angle between a plane defined by vectors $\bm{v}$ and $\bm{k}$ and the vector pointing in the direction of C$_\beta$ atom, should be $\sim$150\degree, in order for the angles between any combination of 3 atoms (one of which has to be C$_\alpha$) to be $~$110\degree.
 After applying the rotational formula \ref{eq:rotformula}, scaling the unit vector $\bm{v_{rot}}$ by the length of the bond and adding the coordinates of the C$_\alpha$ atom the coordinate of the C$_\beta$ can be calculated.
 
-Visual representation of the vectors and the operations can be seen on Figure \ref{fig:cbeta}.
-
-% \subsection{Gradient Descent Based Structure Optimization}
-
-% Gradient descent is method for gradual optimization of parameters of a model with a goal of decreasing some loss function. By model we understand a set of mathematical operations that take as an input the parameters and generate an output. 
-
-% In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second step of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids together with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure. The distributions of distances and torsion angles were used in the structure optimization algorithm to define a loss function and to create several random initial states of structures by sampling from the torsion angle distributions.
-
-% Gradient descent is a widely used method in many machine learning algorithms, and the main optimization technique for Neural Networks (see Algorithm \ref{alg:gd}). The algorithm simply finds a direction in the space of parameters, in which the loss function decreases the fastest and moves in this direction. This is repeated many times until the process is stopped. Algorithm \ref{alg:strucreal_gd} sketches the steps of the optimization steps, which will be explained in the following paragraphs:
-
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=\linewidth]{imgs_tomas/momentum.png}
-%     \caption{Gradient Descent with Momentum}
-%     \label{fig:momentum}
-% \end{figure}
-
-% \begin{algorithm}[ht]
-% \caption{Structure Optimization}
-% \label{alg:strucreal_gd}
-% \begin{algorithmic}[1]
-% \State Initialize $\bm{V}$
-% \State Random sample of model parameters $(\phi, \psi)$
-%     \Repeat
-%         \State Forward pass through the model $\mathcal{G}((\phi, \psi))$
-%         \State Calculate Loss
-%         \State Backward pass - Calculate Gradients ($\nabla (\phi, \psi)$)
-%         \State Normalize gradients
-%         \State Update $\bm{V}$: $\bm{V} = \mu \bm{V} - \alpha \nabla (\phi, \psi)$
-%         \State Update model parameters: $(\phi, \psi) = (\phi, \psi) + \bm{V}$
-%     \Until{i = iterations}
-% \end{algorithmic}
-% \end{algorithm}
-
-% In the first step we initialized a vector $\bm{V}$ which we used for implementing momentum. This is a simple idea the reuses gradient from previous iteration, where we no longer move in the direction of the steepest descent, but the direction is altered (dependent on the momentum parameter $\mu$) by adding the vector pointing in the direction of the last gradient. The principle of momentum is visualized on Figure \ref{fig:momentum}.
-
-% The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von-Misses distribution to the histograms. Von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
-% $$\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$$ 
-% where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
-% The $\kappa$ parameter is called concentration ($\sim 1/\sigma^2$) and describes the dispersion and $\mu$ is the mean direction of the distribution \cite{vonmises}. 
-
-% In the next step the algorithm enters a cycle which ends after specified number iterations. In the first step of each iteration the model of protein geometry is created from current torsion angles ($(\phi, \psi)$), which are the parameters of the model, and the coordinates of backbone + C$_\beta$ atoms are computed. Finally a distance matrix is computed between all C$_\beta$ atoms of all residues (C$_\alpha$ for glycine).
-
-% We used the distance distributions predicted by the neural network to define a loss function:
-
-% \begin{equation}
-%      V_{dist}(\mathcal{G}((\phi, \psi))) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
-%      \label{eq:dist_pot}
-% \end{equation}
-
-% which is a simple negative log-likelihood function. In order to calculate the loss at any inter-residue distance, we approximated the distance histograms with a normal distribution (scaled, so that its max probability is the same as for the particular distogram).
-
-% The sixth step of the algorithm refers to a computation of the gradients, which thankfully is done automatically by pytorch by calling the \texttt{.backward} method. In order to avoid exploding gradients, we divided the gradients by their standard deviation before updating the parameters. This ensured that the gradients were roughly on the same scale throughout the algorithm interations, while preserving their orientations. In the 8th and 9th step the parameters are updated with the possibility of reusing previous gradients, by setting the momentum parameter $\mu > 0$.
+Visual representation of the vectors and the operations can be seen in Figure \ref{fig:cbeta}.
 
 \section{Evaluation Metrics}
 
-In order to assess the performance of different models and most importantly, evaluate the closeness of the predictions to the reality a good metric is neccessary. The metrics used in protein folding protocols are usually divide into two classes: alignment free and alignment dependent. As the name of the first category suggests, these metrics do not require for the two structures to be aligned while the latter ones does. The advantage of the alignment free metrics is that they are faster to use, however the alignment requiring metrics provide more information. 
+In order to assess the performance of different models and most importantly, evaluate the closeness of the predictions to the reality a good metric is necessary. The metrics used in protein folding protocols are usually divided into two classes: alignment-free and alignment-dependent. As the name of the first category suggests, these metrics do not require for the two structures to be aligned while the latter one does. The advantage of the alignment-free metrics is that they are faster to use, however, the alignment requiring metrics provide more information. 
 
-We will first describe an alignment free metric we used for comparing and choosing between our models (DlDDT) and then the TM-Score metric, already mentioned in the introduction.
+We will first describe an alignment-free metric we used for comparing and choosing between our models ((D)lDDT) and then the TM-Score metric, already mentioned in the introduction.
 
 \subsection{(D)lDDT - (Distogram) local Distance Difference Test}
 
@@ -422,7 +354,7 @@ $$IDDT = \frac{100}{4} \sum_{t \in \{0.5, 1, 2, 4\}} \frac
 {\sum_{i = 1}^L \sum_{j, |i - j| > 1, D_{ij} < 15} \mathds{1}(|D_{ij} - d_{ij}| < t)}
 {\sum_{i = 1}^L \sum_{j, |i - j| > 1, D_{ij} < 15} 1} $$
 
-However, since our models are essentialy classifiers and we predict a distribution of distances for each $D_{ij}$, Alphafold proposed a modified version of this metric. Instead of the indicator function in numerator it calculates probabilities of bins around the real distance that are closer to it than the treshold $t$. Formally:
+However, since our models are essentially classifiers and we predict a distribution of distances for each $D_{ij}$, Alphafold proposed a modified version of this metric. Instead of the indicator function in the numerator, it calculates probabilities of bins around the real distance that are closer to it than the threshold $t$. Formally:
 
 \begin{equation}
 DlDDT = \frac{100}{4} \sum_{t \in \{0.5, 1, 2, 4\}} \frac
@@ -433,7 +365,7 @@ DlDDT = \frac{100}{4} \sum_{t \in \{0.5, 1, 2, 4\}} \frac
 
 \subsection{TM-score}
 
-The Template Modelling score assesses the similarity between two three dimensional structures. As opposed to a simple RMSD metric, TM score is less inflated by outliers and favors folds with better aligned regions. TM-score also takes into account the length of the aligned region, which proved to be an important idea. The calculation requires structural alignment of the predicted and template structure\cite{tmscore}. The calculation and alignment of the structure was performed by the freely available TM-align package \cite{tmalign}.
+The Template Modelling score assesses the similarity between two three dimensional structures. As opposed to a simple RMSD metric, TM score is less inflated by outliers and favours folds with better-aligned regions. TM-score also takes into account the length of the aligned region, which proved to be an important idea. The calculation requires structural alignment of the predicted and template structure\cite{tmscore}. The calculation and alignment of the structure were performed by the freely available TM-align package \cite{tmalign}.
 
 % \begin{equation}
 %     TMscore = Max \left[ \frac{1}{L_N} \sum_{i = 1}^{L_T} \frac{1}{1 + (\frac{d_i}{d_0})^2)} \right]
