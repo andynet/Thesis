@@ -72,19 +72,21 @@ where $a_l, l \in {1, ..., k}$ are the activation functions and $W_l, l \in {1, 
 
 There are many possibilities for the activation function and the choice of it usually depends on the particular goal in mind.
 % from here it feels sloppy
-Some of the most commonly used activation functions are listed in Figure \ref{list:activations} and visualized in the Figure \ref{fig:activation_functions}.
+Some of the most commonly used activation functions are listed below
+%in Figure \ref{list:activations} 
+and visualized in the Figure \ref{fig:activation_functions}.
 
 \begin{itemize}
     \item $\text{Identity}(x) = x$
-    \item $\text{Tanh}(x) = \frac{\exp(x) - \exp(-x)}{\exp(x) + \exp(-x)}$
-    \item $\text{Sigmoid}(x) = \frac{1}{1 + \exp(-x)}$
+    \item $\text{Tanh}(x) = \frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}$
+    \item $\text{Sigmoid}(x) = \frac{1}{1 + exp(-x)}$
     \item $\text{HardTanh}(x) = \begin{cases}
              1 & \text{ if } x > 1 \\
              x & \text{ if } 1 \geq x \geq -1 \\
             -1 & \text{ if } x < -1 \\
           \end{cases}$
     \item $\text{ReLU}(x) = \max(0, x)$
-    \item $\text{ELU}(x) = \max(0,x) + \min(0, \alpha * (\exp(x) - 1))$
+    \item $\text{ELU}(x) = \max(0,x) + \min(0, \alpha (exp(x) - 1))$
     % \item $\text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}$
     \label{list:activations}
 \end{itemize}
@@ -96,121 +98,113 @@ Some of the most commonly used activation functions are listed in Figure \ref{li
     \label{fig:activation_functions}
 \end{figure}
 
-% checkpoint
-% softmax
-% tanh(x) = 2*sigmoid(2x) -1
-
-% https://ml-cheatsheet.readthedocs.io/en/latest/activation_functions.html
-% In the single-layer Perceptron example, we already used a non-linear activation function on the output layer - the sign function.
-Probably the first non-linear function to consider would be the sign function, since we already used this function in the output layer of the single-layer Perceptron.
-Unfortunately, this function has a derivative 0 almost everywhere, with the exception of $x=0$ where it is non-differentiable and discontinuous.
-These properties complicate the process of learning and therefore this function is rarely used during the training of the model.
-To address these issues, researchers used hyperbolic tangents in the past as the smooth alternative to the sign function, sometimes scaling it to sigmoid function, which can be interpreted in probabilistic manner.
-Unfortunately, these functions, although differentiable everywhere, often provide quite small gradients.
+In the single-layer Perceptron example, we already used a non-linear activation function on the output layer - the sign function.
+Unfortunately, this function has a derivative 0 almost everywhere, except for $x=0$ where it is non-differentiable and discontinuous.
+These properties complicate the process of learning and therefore this function is seldom used on hidden layers and also rarely used on output layers in practice.
+To address these issues, researchers used hyperbolic tangent in the past as the smooth alternative to the sign function. 
+Sometimes they also used the sigmoid function, hyperbolic tangent scaled as $\text{tanh}(x) = 2 \cdot \text{sigmoid}(2x) - 1$, due to its probabilistic interpretation.
+Unfortunately, these functions, although differentiable everywhere, often provide small gradients.
 This creates a problem commonly called vanishing gradient.
-% which we will discuss later in the section
-Recently, a solution to this problem was proposed in the form of using Hard Hyperbolic Tangent (HardTanh) or the Rectified Linear Unit (ReLU).
-These piecewise activation functions provide a gradients of 0 or 1, depending on the input values.
-% dying ReLu problem
-Finally, Exponential Linear Unit (ELU) is an improvement of the ReLU function which we use in this project. 
-\subsubsection{Activation functions on output layer}
-Until this point, we considered only the classification task with two classes.
-However, it is possible to extend neural networks to much more different tasks at hand.
-One of the possible extensions is the regression task, where our response is some numeric value $Y \in R^n$.
-In these settings, we could use the Identity function on the output layer.
-The error function, which we want to minimize would be an ordinary least squares. 
+Recently, a solution to the vanishing gradient problem was proposed in the form of using hard hyperbolic tangent (HardTanh) or the Rectified Linear Unit (ReLU).
+These piecewise activation functions provide a gradient of 0 or 1, depending on the input values.
+However, another problem arises with the piecewise activation functions, usually referred to as "dying ReLU" problem.
+It can happen during the training that the weights will be updated in such a way that the neuron will stop sending signals.
+This will stop the gradient flow in the network through the neuron, making it unable to update ever again.
+Such a neuron is referred to as dead neuron.
+One possible solution is to use Exponential Linear Unit (ELU) \cite{clevert2015fast}.
+This is an improvement of the ReLU function because the gradient of this function is always non-zero.
+During this project, we mainly used ELU as an activation function in our networks.
+\cite{activations}
 
-Another of the possible extensions is the multiclass classification task, where we want to learn to distinguish more classes.
-In this case, we usually encode our output with one-hot-encoding.
-For example, consider classification to 3 classes.
-In this case, we can encode the labels as follows:
-\begin{itemize}
-    \item $1 \to (1, 0, 0)$ 
-    \item $2 \to (0, 1, 0)$
-    \item $3 \to (0, 0, 1)$
-\end{itemize}
-To enable our network to learn this relation, we use the output layer with 3 output neurons.
-In theory, we could just use the Identity function and select the highest value as the predicted class, but in practice the Softmax function is often used.
-The Softmax function is defined as:
+\subsubsection{Activation functions on the output layer}
+As mentioned previously, the sign function is, due to its zero gradient, rarely used even on the output layer of the neural network.
+Instead, there is a tendency to use its smooth counterpart, the sigmoid function.
+In this case, the labels will be from the set $\{0, 1\}$ and the predictions from our model will represent the probability of belonging to the first class.
+It is also a common task to classify more than 2 classes, for which this labelling scheme is not sufficient.
+Therefore, in the multiclass classification settings with $C$ classes, the labels will be from the set $\{0, 1, ..., C-1\}$.
+To model these labels, neural networks generally have $C$ output neurons.
+The prediction then could be the position of the neuron with the highest value, but often we want to transform the output values to probabilities with the softmax function \ref{eq:softmax}.
+After this transformation, the outputs of the network are guaranteed to be from interval $[0, 1]$ and sum to 1.
 
 \begin{equation}
-    \text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
+    \text{softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
+    \label{eq:softmax}
 \end{equation}
 
-and it has some very nice properties.
-Firstly, it maps the real-valued outcome to the interval $[0, 1]$.
-Secondly, the sum of the outcome is always 1.
-To be able to optimize a network with this output, we use the negative log likelihood loss.
+%To train such a network, we also need to encode the labels to one-hot encoding, meaning we transform all the labels to a vectors of size $C$ filled with 1 at the position given by the label value and zeroes everywhere else.
+To train such a network the labels need to one-hot-encoded, meaning that all labels are transformed to vectors of size $C$ filled with 1 at the position given by the label value and zeroes everywhere else.
 
-\begin{equation}
-    \ell(x, y) = \sum_{n=1}^N \frac{1}{\sum_{n=1}^N w_{y_n}} l_n 
-\end{equation}
+Another common task is the regression task, where our response is some numeric value $Y \in R^n$.
+%In these settings, we use the Identity function on the output layer with only one neuron.
+In these settings an Identity function is used on the output layer with only one neuron.
 
 \subsubsection{Training of the neural networks}
 The training of the neural networks refers to the learning process.
 In neural networks, this is done by adjusting the weights $W$ in such a way that the relationship between input $X$ and output $Y$ is approximated as well as possible.
 To be able to evaluate the performance of the current network, we need to define loss function.
-This function gets the predicted output $\hat{Y}$ and the real output $Y$ and evaluates the error made during the prediction.
-Some commonly used loss functions are, for example, Mean Squared Error (MSE) and the Negative Log-Likelihood.
-The Mean Squared Error is mainly used in regression setting, when we want to predict a continuous value.
-It is defined by equation \ref{eq:MSE}.
+This function gets the predicted output $\hat{Y} = h(X)$ and the real output $Y$ and evaluates the error made during the prediction.
+Some commonly used loss functions are mean squared error (MSE, Equation \ref{eq:MSE} for regression) and the negative log-likelihood (NLL, Equation \ref{eq:NLL} for classification).
 
 \begin{equation}
-    \ell(\hat{Y}, Y) = \text{mean}(L) = \text{mean}(l_1,\dots,l_N), 
-    \text{where} l_n = (\hat{Y}_n - Y_n)^2
+    \ell(\hat{Y}, Y) = \frac{1}{n} \sum_{i=0}^{n-1} (\hat{Y}_i - Y_{i})^2 
     \label{eq:MSE}
 \end{equation}
 
-The Negative Log-Likelihood is used for classification purposes with C classes.
-It is defined by equation\ref{eq:NLL}.
-% NLL = -log(p), nie? toto je trochu matuce, aj s tym MSE hore
 \begin{equation}
-    \ell(\hat{Y}, Y) = \sum_{n=1}^N \frac{1}{\sum_{n=1}^N w_{Y_n}} l_n,
-    l_n = - w_{y_n} x_{n,y_n},
+    \ell(\hat{Y}, Y) = -\log(P(Y|\hat{Y}))
     \label{eq:NLL}
 \end{equation}
 
-The input to this loss function has to contain log-probabilities of each considered class.
-Obtaining log-probabilities from the neural network can be achieved by adding Softmax activation function to the output layer and taking logarithm of the resulting values.
+Now, with all parts in place, we can illustrate the training process of the neural network.
+The main goal is to find such a function $h$, which approximates the true function $f$ as well as possible.
+Using the Equation \ref{eq:loss}, we can see that this is equal to minimizing the loss function.
 
-Now, with all parts in place, we can illustrate the training process.
-The training of the neural networks is done iteratively.
-First, we predict the output values $\hat{Y}$ for our input $X$.
-This is done in the forward pass through our neural network.
-Afterwards, we calculate the error using the loss function.
-Then, we use this error to calculate the gradient with respect to weights.
-This is done in the backward pass through our neural network.
-The weights are then updated in the direction of negative gradient.
-The process is then repeated, until convergence is achieved.
+\begin{equation}
+    \ell(h(X), f(X)) = \ell(\hat{Y}, Y)
+    \label{eq:loss}
+\end{equation}
 
-This training process is also referred as Gradient Descent and we provide the algorithm in the Box \ref{alg:gd}.
+%The minimization is done iteratively and consists of these steps.
+The minimization is done iteratively and consists of the following steps.
+The first step is a forward pass through the network, during which we predict the output values $\hat{Y}$ for the input data $X$.
+The predicted output values $\hat{Y}$ and the true output values $Y$ are then used to calculate the prediction error, sometimes also called loss, using the appropriate loss function.
+% Afterwards, during the backward pass, we calculate the gradient with respect to the weights of the calculated loss.
+Afterwards, during the backward pass the gradients with respect to the weights of the calculated loss are calculated.
+The weights $W$ of the neural network are then updated in the direction of the negative gradient using the learning rate $\alpha$.
+% The whole process is then repeated until we converge or until a certain stopping criterion is met.
+The whole process is then repeated until convergence or until a certain stopping criterion is met.
+
+This technique of minimizing the loss function is also referred to as Gradient Descent Algorithm \ref{alg:gd}.
 
 \begin{algorithm}
-\caption{Gradient Descent}
-\label{alg:gd}
-\begin{algorithmic}[1]
-\State $w \gets \textit{initialize}$
-\Repeat
-\State $\hat{Y} = \textit{predict(X, w)}$
-\State $w = w - \alpha * \nabla_w E_{in}(\hat{Y}, Y)$
-\Until{convergence}
-\end{algorithmic}
+    \caption{Gradient Descent}
+        \label{alg:gd}
+        \begin{algorithmic}[1]
+            \State $W \gets \textit{initialize()}$
+            \Repeat
+                \State $\hat{Y} = \textit{predict(X, W)}$
+                \State $W = W - \alpha * \nabla_W \ell(\hat{Y}, Y)$
+            \Until{stopping criterion is met}
+        \end{algorithmic}
 \end{algorithm}
 
 Although this algorithm provides a solid basis to analyze the learning process, it is usually too slow to be used in practice.
-This is mainly caused by the need to calculate the predictions across all the datapoints in the training dataset.
+This is mainly caused by the need to calculate the predictions across all the data points in the training dataset.
 Since nowadays the training datasets tend to be very big, a modification to this algorithm was proposed.
-Instead of using all the datapoints from training dataset, the error is just estimated with one point.
-This is what is called the Stochastic Gradient Descent and it was one of the most significant steps in adopting the neural networks in a broad range of tasks.
+Instead of using all the data points from training dataset, the error is just estimated with one point.
+This is called the Stochastic Gradient Descent and it was a very significant step in adopting the neural networks in a broad range of tasks.
 
-The time complexity of the Gradient Descent is $\mathcal{O}(n\log{\frac{1}{\epsilon}})$, where $n$ is the number of datapoints in the training dataset and $\epsilon$ is how far away from the minimum we want to end up.
+The time complexity of the Gradient Descent is $\mathcal{O}(n\log{\frac{1}{\epsilon}})$, where $n$ is the number of data points in the training dataset and $\epsilon$ is how far away from the minimum we want to end up.
 As we can see, the $n$ factor in this time complexity is very significant when the dataset is huge.
-Because the Stochastic Gradient Descent uses just one datapoint to estimate the gradient, it makes noisy estimates, which might not be in the optimal direction, but it is able to make those estimates much more quickly.
+Because the Stochastic Gradient Descent uses just one data point to estimate the gradient, it makes noisy estimates, which might not be in the optimal direction, but it can make those estimates much quicker.%more quickly.
 The time complexity of this method is $\mathcal{O}(1\cdot\frac{1}{\epsilon})$.
 
-In practice, we prefer to use more datapoints than one during the training to estimate the gradient.
+In practice, we prefer to use more data points than one during the training to estimate the gradient.
 This is called the Mini-Batch Stochastic Gradient Descent and it presents a middle-ground option between the two extremes.
-The estimates of the gradient are not as noisy as during the SGD and the time to compute the gradient is also significantly reduced. 
+The estimates of the gradient are not as noisy as during the Stochastic Gradient Descent and the time to compute the gradient is significantly reduced as well. 
+
+% checkpoint
+% https://www.youtube.com/watch?v=JXQT_vxqwIs
 
 \subsubsection{Parameter initialization}
 Another important aspect of the neural networks is their parameter initialization.
@@ -221,10 +215,10 @@ This ensures to break the symmetry during the learning and allows to update the 
 
 Another thing to consider is the magnitude of these newly initialized weights.
 Too big or too small values can cause numerical issues during the training due to limitations of float number representation in computers, which are inherently discreet systems.
-Initializing the weights to sample from Uniformly distributed values from interval [0, 1] or from Normal distributed values with mean 0 and standard deviation 1 usually works fine for smaller neural networks, but might cause numerical problems when the number of input connections and the number of output connections is big.
-Therefore, an improved aproaches, which take number of incomming and outgoing connections, were proposed.
-First approach is the Glorot initialization \cite{glorot2010understanding}.
-In this initialization, the weights are sampled either from an Uniform distribution from interval [$-a, a$] or from Normal distribution with mean 0 and standard deviation $a$, where parameter $a$ is defined as:
+Initializing the weights to sample from Uniformly distributed values from interval [0, 1] or from normally distributed values with mean 0 and standard deviation 1 usually works fine for smaller neural networks, but might cause numerical problems when the number of input connections and the number of output connections is big.
+Therefore, improved approaches, which take the number of incoming and outgoing connections, were proposed.
+The first approach is the Glorot initialization \cite{glorot2010understanding}.
+In this initialization, the weights are sampled either from the uniform distribution from the interval [$-a, a$] or from the normal distribution with mean 0 and standard deviation $a$, where parameter $a$ is defined as:
 
 \begin{equation}
     a = \text{gain} \times \sqrt{\frac{6}{\text{fan\_in} + \text{fan\_out}}}
@@ -244,80 +238,77 @@ and in the case of Normal distribution, the standard deviation parameter is calc
     \text{std} = \frac{\text{gain}}{\sqrt{\text{fan\_mode}}}.
 \end{equation}
 % this needs more explanation
+% end checkpoint
 
 \subsection{Convolutional Neural Networks}
 Convolutional neural network (CNN) is a special type of neural network designed to work with data with a strong spatial dependence.
-One canonical example of such data are images.
-The strong spatial dependence in the image data is demonstrated by the fact that often the regions close to each another exhibit the same values of the pixel colors.
+One canonical example of such data is an image.
+The strong spatial dependence in the image data is demonstrated by the fact that often the regions close to each another exhibit the same values of the pixel colours.
 Another important feature of the image data is the translational invariance, meaning that an object moved from one position in the picture to another position is still identifiable.
 
 A basic operation in the convolutional neural networks is the convolution.
-The convolution operation is inspired by the experiments on cat's visual cortex performed by Hubel and Wiesel \cite{hubel1959receptive}.
-Here, the biological neurons are divided into small regions which differ in sensitivity towards the stimuli from different regions of visual field.
+The convolution operation is inspired by the experiments on the cat's visual cortex performed by Hubel and Wiesel \cite{hubel1959receptive}.
+Here, the biological neurons are divided into small regions with different sensitivity towards the stimuli from different regions of the visual field.
 Furthermore, the sensitivity of different regions varies with the different shape and orientation of the observed objects.
-For example, a vertical lines in the visual field can activate some regions of the biological neurons and horizontal lines can activate different regions of the biological neurons.
-The regions are then connected in hierarchical fashion, which allows the deeper regions to recognize for example squares.
+For example, vertical lines in the visual field can activate some regions of the biological neurons and horizontal lines can activate different regions of the biological neurons.
+The regions are then connected in a hierarchical fashion, which allows the deeper regions to recognize more complex shapes.%for example squares.
 
-% add: locality 
-Convolutional neural networks are using similar principles to extract and encode an important features of presented image.
+Convolutional neural networks are using similar principles to extract and encode the important features of the presented image.
 From the computational point of view, CNNs are neural networks heavily regularized by the number and location of connections.
-They perform exceptionally well on image classification tasks, recently achieved human-level performance on ImageNet dataset.
+They perform exceptionally well on image classification tasks and recently achieved human-level performance on ImageNet dataset.
 The ImageNet dataset is the benchmark dataset used in ImageNet Large Scale Visual Recognition Competition (ILSVRC), which is annual competition hugely contributing to the development and application of neural networks.
 % imagenet uz nebezi. Zacne sa prechadzat z 2d na 3d - kukni objectnet
-% add:
-% different architectures, with just minor changes
-% some notable winners - LeNet, AlexNet, 
 
 \subsubsection{Convolution layer}
-% add: CNN defined as neural netowkrs with at least one convolutional layer 
 Convolution layer is the characteristic unit of the Convolutional Neural Network.
-It applies the Kernel to the data to transform the input to the output.
-The Kernel is a small grid with trainable parameters.
-To illustrate how to apply such a Kernel to the data let us imagine a Kernel $K$ with the size $3 \times 3$.
+It applies the kernel to the data to transform the input to the output.
+The kernel is a small grid with trainable parameters.
+To illustrate how to apply such a kernel to the data let us imagine a kernel $K$ with the size $3 \times 3$.
 In this example, we will apply this to an image $I$ of size $5 \times 5$ pixels, where each pixel contains one numerical value, representing the brightness of the pixel.
-First we will apply the Kernel to the image at position $(0, 0)$.
-This means, we will do element-wise multiplication between the Kernel and the part of the Image from position 0 to position 3 on x-axis and from position 0 to position 3 on y-axis.
+First, we apply the kernel to the image at position $(0, 0)$.
+This means we will do element-wise multiplication between the kernel and the part of the image from position 0 to position 3 on the x-axis and from position 0 to position 3 on the y-axis.
 Afterwards, we will sum all the products of the multiplication to get a first result of the convolution process with position (0, 0).
-Then, we will move the Kernel by one pixel to the right.
-Here, we will perform the same operation, with the only difference that the part of the Image used in this convolution will start at position 1 on the x-axis and 0 on the y-axis.
+Then, we will move the kernel by one pixel to the right.
+Here, we will perform the same operation, with the only difference that the part of the image used in this convolution will start at position 1 on the x-axis and 0 on the y-axis.
 The result of this convolution will be assigned to the position (1, 0) as well.
-We continue the operation by shifting the Kernel to the right until we reach the end if the Image.
-Afterwards, we will shift the Kernel by one pixel down and start the same process of convolution on this row.
-This is repeated until we slide through all possible rows and columns of the Image grid.
-The convolution operation is visualized in Figure \ref{fig:convolution}.
+We continue the operation by shifting the kernel to the right until we reach the end of the image.
+Afterwards, we will shift the kernel by one pixel down and start the same process of convolution on this row.
+This is repeated until we slide through all possible rows and columns of the image grid.
+The convolution operation is visualized in Figure \ref{fig:stride}.
 
 % tento obrazok je zbytocny podla mna. nedodava viac informacie ako ten pod nim, ktory este zahrnuje aj padding a stride. a zabera vela miesta
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_andy/convolution.png}
-    \caption{Convolution operation}
-    \label{fig:convolution}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\linewidth]{imgs_andy/convolution.png}
+%     \caption{Convolution operation}
+%     \label{fig:convolution}
+% \end{figure}
 
 % padding
-An important observation in this case is that the convolution operation reduces the size of the image by default.
+An important observation, in this case, is that the convolution operation reduces the size of the image by default.
 This behaviour is usually not desirable, because it might lead to loss of information at the edge of the image.
-Fortunately, it can be easily corrected by using a padding.
+Fortunately, it can be easily corrected by using padding.
 Using the padding results in adding some number of pixels, usually containing zeros, to the edge of the image.
-In our example, we could extend the Image from $5 \times 5$ to $7 \times 7$ by adding zeros around it.
+In our example, we could extend the image from $5 \times 5$ to $7 \times 7$ by adding zeros around it.
 This would ensure, that the dimensionality of the picture stays the same after convolution.
 
 % half-padding
-The size of the padding mainly depends of the size of the selected kernel.
+The size of the padding mainly depends on the size of the selected kernel.
 Some of the most used kernel sizes are $3 \times 3$, $5 \times 5$ and $7 \times 7$, with their corresponding paddings $1$, $2$ and $3$.
 In general, the padding preserving the size of the image is of size $(F_q - 1)/2$ pixels wide.
-This type of padding is also called half-padding, because almost half of the kernel is sticking out of the original image at the edges.
+This type of padding is also called half-padding because almost half of the kernel is sticking out of the original image at the edges.
 
 % valid padding
-Using the half-padding usually works better in experiments than using no padding, which is sometimes also referred as valid padding.
+Using the half-padding usually works better in experiments than using no padding, which is sometimes also referred to as valid padding.
 The intuition behind this remark is that valid padding tends to under-represent the information at the borders in comparison with the central pixels of the image.
 Due to these disadvantages of the valid padding, it is rarely used in practice and most of the architectures tend to use the half-padding.
 
 % full padding
-Another type of padding is the full-padding.
-In this case, we will pad the image with border of $F_q - 1$ zeros wide.
+Another type of padding is full-padding.
+%In this case, we will pad the image with a border of $F_q - 1$ zeros wide.
+In this case, the image is padded with a border of $F_q - 1$ zeros wide.
 This padding allows almost the full kernel to stick out of the image.
-One interesting remark about this type of padding is that every pixel of the original image is covered same number of times.
+One interesting remark about this type of padding is that every pixel of the original image is covered the same number of times.
 Furthermore, this padding increases the dimensions of the image by $F_q - 1$.
 To illustrate the reason why, let us consider the image of size $(W, H)$.
 This image will be padded by $F_q - 1$ from all sides, therefore the size of the padded image will be $(W + 2\cdot(F_q - 1), H + 2\cdot(F_q - 1))$.
@@ -327,11 +318,12 @@ This fact is sometimes used in "reverse" convolution layers, which are mainly us
 \subsubsection{Strides}
 Until now, we considered two parameters of a convolution layer - kernel size and padding.
 Another parameter sometimes used in convolution layers is stride.
-The stride correspond to the shift by which we move the kernel along the axis.
+%The stride corresponds to the shift by which we move the kernel along the axis.
+The stride corresponds to the shift by which the kernel is moved along the axis.
 In the previous example, we used the stride of $1$.
 Using the bigger values for stride $S$ has an effect of reduction of the dimension of the image by a factor of approximately $S$. 
 To clarify how this is done, let us consider the movement on the x-axis in the previous example.
-There, we started at the position 0, then continued with position 1, followed by position 2 and so on.
+There, we started at position 0, then continued with position 1, followed by position 2 and so on.
 This can also be written as a sequence $0\cdot S, 1\cdot S, 2\cdot S\dots$ with the stride parameter $S = 1$.
 By increasing the stride parameter to 2, we would get a sequence $0\cdot2, 1\cdot2, 2\cdot2\dots = 0, 2, 4\dots$.
 This is also shown in Figure \ref{fig:stride}
@@ -344,7 +336,7 @@ This is also shown in Figure \ref{fig:stride}
 \end{figure}
 
 It is noteworthy, that increased stride reduces the dimensions of the image.
-This effect is even stronger than reduction of the dimensions by valid padding, but it does not suffer by under-representing data closer to the border.
+This effect is even stronger than the reduction of the dimensions by valid padding, but it does not suffer by under-representing data closer to the border.
 In general, it reduces the size of the image according to the Equation \ref{eq:stride}, where $L_1$ is the length of the dimension when using the stride $S=1$ and $S$ is the used stride.
 
 \begin{equation}
@@ -353,22 +345,22 @@ In general, it reduces the size of the image according to the Equation \ref{eq:s
 \end{equation}
 
 Sometimes, this reduction is even used as an advantage, especially, when the resolution of the image is too high.
-It can also help to reduce over-fitting or in cases, when the memory is constrained.
+It can also help to reduce over-fitting or in cases when the memory is constrained.
 Another remark is that the stride increases the receptive field of the consequent convolutions.
 This allows the consequent convolutions to capture more complex features in the deeper layers.
 A similar function is performed by another characteristic layer of Convolutional Neural Networks presented in the following part.
 
 \subsubsection{Pooling layer}
-Similarly to the Convolution layers, Pooling layers operate on small regions of the Image.
-There are two main difference between these two types of layers.
-First difference is that the pooling layer usually uses the stride parameter $S$ of the same value than the size of the kernel in that particular direction.
+Similarly to the Convolution layers, Pooling layers operate on small regions of the image.
+There are two main differences between these two types of layers.
+The first difference is that the pooling layer usually uses the stride parameter $S$ of the same value than the size of the kernel in that particular direction.
 The second difference is that the pooling layer does not use the dot product.
 The most common practice is to take the maximum of the entry-wise product.
-This is referred as max-pooling.
+This is referred to as max-pooling.
 Additionally, pooling can use any other function, which takes the matrix of entry-wise products and returns a single number, like for example average.
 These other functions are rarely used, mainly due to their worse performance in practice. 
 
-The main purpose of the pooling layers in Convolutional Neural Networks is to increase the receptive field in the consecutive layers, while decreasing the spatial size.
+The main purpose of the pooling layers in Convolutional Neural Networks is to increase the receptive field in the consecutive layers while decreasing the spatial size.
 A similar effect can be accomplished with strided convolutions, which sometimes makes pooling layers unnecessary.
 Nevertheless, the effect of max pooling can not be exactly replicated due to the max operation.
 
@@ -377,7 +369,7 @@ Nevertheless, the effect of max pooling can not be exactly replicated due to the
 As we saw in previous examples, the standard convolutions take into account a region of the input image and perform the convolution operation with the kernel.
 This region usually consists of a few consecutive pixels in the x-axis and y-axis.
 A relatively recent innovation is to consider as a region pixels separated by a few skipped pixels.
-This is shown in the Figure \ref{fig:dilated_conv}.
+This is shown in Figure \ref{fig:dilated_conv}.
 
 \begin{figure}
     \centering
@@ -386,29 +378,23 @@ This is shown in the Figure \ref{fig:dilated_conv}.
     \label{fig:dilated_conv}
 \end{figure}
 
-This is called dilated convolutions and effectively it increases receptive field of the convolution operation.
+This is called dilated convolutions and effectively it increases the receptive field of the convolution operation.
 Formally, the output of convolution at position $i, j$ of input map can be calculated as:
 
 \begin{equation}
     \text{OUT}_{i,j} = \sum_{k=0}^{K-1} \sum_{l=0}^{K-1} \text{IN}_{i+(k \cdot D),j+(l \cdot D)} \cdot \text{KERNEL}_{k, l},
 \end{equation}
 
-where $K$ is the kernel size and D is the dilation.
-
-% local connectivity - the neuron will be connected only to small number of neurons in the previous layer, which are close together
-% part of the image that the neuron is connected to is called receptive field
-% The receptive field is defined as the region in the input space that a particular CNN’s feature is looking at (i.e. be affected by)
-% https://medium.com/mlreview/a-guide-to-receptive-field-arithmetic-for-convolutional-neural-networks-e0f514068807
+where $K$ is the kernel size and $D$ is the dilation.
 
 \subsubsection{Convolutions through multiple channels}
-% basic principle
 Up to this point, we have considered only convolutions on maps with only one channel.
-Examples of such maps are for instance gray scale images, where each grid entry contains one number representing the intensity of light in that particular pixel.
+Examples of such maps are for instance greyscale images, where each grid entry contains one number representing the intensity of light in that particular pixel.
 However, commonly the images we want to process consist of pixels with 3 different channels.
-Such images can then be represented in a 3-dimensional tensor of $W \times H \times C$, where $W$ is the width of the picture in pixels, $H$ is the height of the picture and $C=3$ is the depth used to store intensities of 3 basic colors - red, green and blue. 
+Such images can then be represented in a 3-dimensional tensor of $W \times H \times C$, where $W$ is the width of the picture in pixels, $H$ is the height of the picture and $C=3$ is the depth used to store intensities of 3 basic colours - red, green and blue. 
 
 In this case, the convolution is performed similarly to the convolution in the simple case, only now our kernel is of size $K \times K \times 3$.
-The computation of the output value is shown in the Equation \ref{eq:conv_channels}.
+The computation of the output value is shown in Equation \ref{eq:conv_channels}.
 
 \begin{equation}
     \text{OUT}_{i,j} = \sum_{k=0}^{K-1} \sum_{l=0}^{K-1} \sum_{m=0}^{C-1} 
@@ -416,22 +402,23 @@ The computation of the output value is shown in the Equation \ref{eq:conv_channe
     \label{eq:conv_channels}
 \end{equation}
 
-Often, it is desired to transform the input with multiple channels to output with multiple channels, where the output channels capture different features of the Image.
+Often, it is desired to transform the input with multiple channels to output with multiple channels, where the output channels capture different features of the image.
 This is done using multiple kernels where each kernel produces a single map of some specific features.
-For example, we can have one kernel which is able to detect edges of the objects in the image and another kernel which is able to detect texture of the objects.
+For example, we can have one kernel which can detect edges of the objects in the image and another kernel which can detect texture of the objects.
 To incorporate these options, PyTorch framework allows to initialize the convolution layers with parameters $\text{in\_channels}$, $\text{out\_channels}$, $\text{kernel\_size}$, $\text{padding}$, $\text{stride}$, $\text{dilation}$.
 
 % 1X1 convolution
-One special convolution operation is noteworthy at this point, commonly referred to as $1 \times 1$ convolution.
-This convolution uses kernel of size $1 \times 1$ and therefore would not do anything significant in the settings with one input map and one output map.
-However, in the settings with multiple input and output channels, this operation can be used to change the number of maps representing our data.
+One special convolution operation is noteworthy at this point, %commonly referred to as $1 \times 1$ convolution. 
+is a $1 \times 1$ convolution. 
+This convolution uses the kernel of size $1 \times 1$ and therefore would not do anything significant in the settings with one input map and one output map.
+However, in settings with multiple input and output channels, this operation can be used to change the number of maps representing the data.
 
 % groups
 Another useful modification to the convolution operation is using $\text{groups}$.
 By default, this parameter is usually set to $1$, which means that only one group is created from all input channels, to create an output map.
 By, for example, setting this parameter to $2$, $2$ groups would be created from input channels.
-First half of the input channels would create one map and the second half of the input channels would create the second one.
-If the groups parameter is set to the number of input layers, each input layer is used separately to create one output layer.
+The first half of the input channels would create one map and the second half of the input channels would create the second one.
+If the $\text{groups}$ parameter is set to the number of input layers, each input layer is used separately to create one output layer.
 This setting is mainly useful in combination with $1 \times 1$ convolutions, where it can reduce the number of parameters significantly. 
 
 % reduction of the parameters using the 1X1 convolution
@@ -450,20 +437,20 @@ In the reduced approach, this responsibility is passed on the grouped convolutio
 
 \subsection{Residual Neural Networks}
 A great portion of improvement of accuracy of the recent neural network models is based on the increased computational power, availability of huge data sets and changes in the architecture of the models.
-The prevalent trend is to use deeper neural networks, because they tend to perform better in practice.
+The prevalent trend is to use deeper neural networks because they tend to perform better in practice.
 This can be intuitively explained by the hierarchical nature of the features extracted.
 
 Unfortunately, the increased depth of the model is also usually linked with the problems of vanishing and exploding gradients.
-To overcome this issues a new architecture was proposed - residual neural network.
+To overcome these issues a new architecture was proposed - residual neural network.
 This architecture introduces skip connections between the layers. 
-The main idea of these skip connections is to let the network decide of the depth that is needed to model a specific feature.
-To show why this is needed let us consider an image containing two object with very different complexity - for instance a human face as an object of relatively high complexity and a simple geometrical shape such as triangle as an object of relatively low complexity.
-To model the human face well, it is likely that a deeper neural network would be needed due to the number of small details which we need to capture.
+The main idea of these skip connections is to let the network decide the depth that is needed to model a specific feature.
+To show why this is needed let us consider an image containing two objects with very different complexity - for instance, a human face (as an object of relatively high complexity) and a simple geometrical shape such as triangle (as an object of relatively low complexity).
+To model the human face well, it is likely that a deeper neural network would be needed due to the large number of small details which we need to capture.
 On the contrary, to model a simple triangular shape a shallow network is likely to be sufficient.
-In residual networks the skip connections allow to model both regions of the image using the same network.
-In the case of face modelling the network will use the deep layers to capture the details and in the case of the triangle only a first few layers will be used and most other layers will be skipped using the skip connections.
+In residual networks, the skip connections allow modelling of both regions of the image using the same network.
+In the case of face modelling, the network will use the deep layers to capture the details and in the case of the triangle only a first few layers will be used and most other layers will be skipped using the skip connections.
 
-The skip connections are realized through addition of the identity to the output of a particular layer.
+The skip connections are realized through the addition of the identity to the output of a particular layer.
 This is visualized in the Figure \ref{fig:skip_connection}.
 \begin{figure}
     \centering
@@ -472,8 +459,9 @@ This is visualized in the Figure \ref{fig:skip_connection}.
     \label{fig:skip_connection}
 \end{figure}
 These skip connections provide an alternative way for the flow of gradient.
-The shortest path, the path using most skips, is learning the most important features of the input.
-The longer paths can then be intuitively viewed as a residual contributions \cite{he2016deep}.
+% The shortest path, the path using most skips, is learning the most important features of the input.
+% The longer paths can then be intuitively viewed as a residual contributions \cite{he2016deep}.
+The shortest path, the path using most skips, is learning the most important features of the input, while the longer paths can then be intuitively viewed as a residual contributions \cite{he2016deep}.
 For this reason, residual networks tend to be more robust to the choice of depth of the model.
     
 % \subsection{AlphaFold}

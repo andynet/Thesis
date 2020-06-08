@@ -5,7 +5,7 @@ It begins with the description of the input.
 The second part focuses on the model choices and mainly describes the convolutional neural network. 
 The last section focuses on structure realization. 
 A graphical overview of the entire pipeline is shown in Figure \ref{fig:project_pipeline}. 
-In each of the 3 subsections, the corresponding part of the diagram will be unravelled to accompany the verbal descriptions.
+%In each of the 3 subsections, the corresponding part of the diagram will be unravelled to accompany the verbal descriptions.
 
 \begin{figure}[ht]
     \centering
@@ -16,12 +16,12 @@ In each of the 3 subsections, the corresponding part of the diagram will be unra
 
 \section{Primary Sequence to CNN Input}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_tomas/pipeline_input.png}
-    \caption{Input / Output data generation}
-    \label{fig:pipeline_input}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\linewidth]{imgs_tomas/pipeline_input.png}
+%     \caption{Input / Output data generation}
+%     \label{fig:pipeline_input}
+% \end{figure}
 
 The primary sequence of proteins is usually recorded in the FASTA format.
 This is one of the most commonly used formats in bioinformatics.
@@ -79,7 +79,7 @@ To find an optimal MSA is an NP-complete problem, but fortunately there exist he
 
 Position-specific Scoring Matrix (PSSM) is generally used to represent biologically important patterns across multiple sequences. 
 
-To create the PSSM, let us assume that we already constructed a multiple sequence alignment (MSA) of our target sequence and related proteins.
+To create the PSSM, let's assume that we already constructed a multiple sequence alignment (MSA) of our target sequence and related proteins.
 This multiple sequence alignment consists of $N$ rows representing sequences and $L$ columns representing positions of alignment.
 Furthermore, each sequence is a sequence of letters from an alphabet with $Q$ symbols.
 
@@ -123,15 +123,22 @@ It will ensure that the probabilities in the PPM will be non-zero and it also ac
     \label{fig:potts_example}
 \end{figure}
 
-The goal of a Potts Model is to simulate probability distribution of every possible combination of symbols in an alphabet.
+The Potts model describes a probability distribution derived from a Multiple Sequence Alignment for any sequence of given constant length. The function has only two parameters: one describing the propensities of symbols in MSA (similar to the PSSM) and one describing pairwise interactions of symbols. For very short sequences the Potts model can be calculated exactly. However this is not feasible in practice, which means that one must resort to gradient descent based techniques. 
 
+The most difficult part for finding Potts Model parameters is to ensure that the probabilities for all sequences sum to one. For this one would need to calculate the value of Potts Model function for all sequences of some length composed of symbols from given alphabet. For example for sequence length of 10 and alphabet of size 21 (number of amino acids + gap), there are $10^{21}$ unique sequences.
+
+An example of Potts model for sequence of length 3 composed of symbols from Alphabet \{A, B, C\} is shown on Figure \ref{fig:potts_example}.
+
+Here one can simply calculate the frequencies and connected frequencies of amino acids in the MSA and then calculate the corresponding Potts Model values (described in more detail in next section). The sum of all these values acts as a normalizing constant for the final model (also called a partition function in later description). 
+
+\subsubsection{Potts Models formalized}
 Let us assume that we have a sequence $\boldsymbol{\sigma} = (\sigma_1, \sigma_2, ..., \sigma_L)$, where $L$ is the length of the multiple sequence alignment. 
 Let us further assume that each symbol $\sigma_i$ in the sequence comes from an alphabet $\mathcal{A} = (a_1, a_2, ..., a_Q)$ of size $Q$. 
 Thus for sequence length $L$ we can generate $Q^L$ number of unique sequences.
     
 In our case, the sequence $\boldsymbol{\sigma}$ is some sequence of amino acids, and thus the alphabet size is equal $Q = 21$ (20 amino acids, 1 gap symbol).
         
-Given an MSA, we would like to find pairs of amino acids that are coupled, i.e. the pairs of amino acids that are correlated due to their direct contact. 
+Given a MSA, we would like to find pairs of amino acids that are coupled, i.e. the pairs of amino acids that are correlated due to their direct contact. 
 The reason why we can not use correlation data directly is that some pairs of amino acids might be correlated through some intermediate paths.
         
 We have to keep in mind that MSA is only generated from a sample of sequences.
@@ -154,7 +161,7 @@ To calculate the frequency of a symbol $k$ at position $i$ in the MSA and the fr
 \end{equation}
 
 Our goal is to create a model $\mathcal{P(\bm{\sigma})}$ that can reproduce the observed frequencies. 
-Formally, the constraints of the model are shown in the Equation \ref{eq:potts_constraints}.
+Formally, the constraints of the model are stated in Equation \ref{eq:potts_constraints}.
         
 \begin{equation}
     \begin{split}
@@ -186,7 +193,7 @@ Specifically, for the Potts model, this loss function can be written as shown in
     \mathcal{L}_(\bm{h}, \bm{J}) = \log \mathcal{Z} - \sum_{i = 1}^L \sum_{k \in \mathcal{A}} f_i(k)\bm{h}_i(k) - \sum_{i = 1}^{L-1} \sum_{j=i+1}^L \sum_{k, l \in \mathcal{A}} f_{ij}(k, l) \bm{J}_{ij}(k, l)
     \label{eq:potts_loss_ml}
 \end{equation}
-        
+
 This function is differentiable and we seek to find its minimum. 
 However, to do so, we need to know the value of the partition function $\mathcal{Z}$, which is practically incomputable for larger domains. 
 To know its exact value, we would need to calculate the value of the Potts model for every possible combination of letters in the alphabet for a given length of the sequence. 
@@ -216,11 +223,12 @@ However, as opposed to Equation \ref{eq:potts_loss_ml}, this objective function 
     \label{fig:backbone}
 \end{figure}
 
-The structure realization step refers to a process of optimizing three dimensional conformation of protein according to some constraints or energy/potential function. If we assume that the bond lenth between neighboring atoms in the backbone (atoms N, C$_\alpha$ and C) + C$_\beta$ atom is constant as well as the angle between atoms in the same plane (angles N-C$_{\alpha}$-C, C$_{\alpha}$-C-N, C-N-C$_{\alpha}$) then the entire structure can be fully described by a set of three torsion angles $\phi$, $\psi$ and $\omega$.
+The structure realization step refers to a process of optimizing three-dimensional conformation of protein according to some constraints or energy/potential function. 
+If we assume that the bond length between neighbouring atoms in the backbone (atoms N, C$_\alpha$ and C) + C$_\beta$ atom is constant as well as the angle between atoms in the same plane (angles N-C$_{\alpha}$-C, C$_{\alpha}$-C-N, C-N-C$_{\alpha}$) then the entire structure can be fully described by a set of three torsion angles $\phi$, $\psi$ and $\omega$.
 
-This assumption allows us to create a model of protein geometry $\mathcal{G}(\phi, \psi)$ that can be optimized ($\omega$ is almost always 180\degree, and so was treated as a constant). We can use the predicted distance histograms (distograms) together with predicted angle distributions to find a structure which inter-residue distances and torsion angles are as close as possible to the modes of these distributions.
+This assumption allows us to create a model of protein geometry $\mathcal{G}(\phi, \psi)$ that can be optimized ($\omega$ is almost always 180\degree, and so was treated as a constant). 
 
-In the following sections we will describe how we tackled the protein geometry problem, together with explanation of torsion angles and how to calculate atom coordinates from them and a short recap of basic linear algebra operations that were used. In the second part we will describe the optimization process.
+In the following sections, we will describe how we tackled the protein geometry problem, together with the explanation of torsion angles and how to calculate atom coordinates from them and a short recap of basic linear algebra operations that were used.
 
 \subsection{Torsion Angles to Coordinates}
 
@@ -339,66 +347,66 @@ To place the C$_{beta}$ we used the rotational formula \ref{eq:rotformula} but t
 
 $$\bm{v} = \bm{v}_{C_\alpha N} \times  \bm{v}_{C_\alpha C}, ~~ \bm{k} = \frac{\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}}{||\bm{v}_{C_\alpha C} -  \bm{v}_{C_\alpha N}||}$$
 
-The angle between a plane defined by vectors $\bm{v}$ and $\bm{k}$ and the vector pointing in the direction of C$_\beta$ atom, should be $~$150\degree, in order for the angles between any combination of 3 atoms (one of which has to be C$_\alpha$) are $~$110\degree.
+The angle between a plane defined by vectors $\bm{v}$ and $\bm{k}$ and the vector pointing in the direction of C$_\beta$ atom, should be $\sim$150\degree, in order for the angles between any combination of 3 atoms (one of which has to be C$_\alpha$) to be $~$110\degree.
 After applying the rotational formula \ref{eq:rotformula}, scaling the unit vector $\bm{v_{rot}}$ by the length of the bond and adding the coordinates of the C$_\alpha$ atom the coordinate of the C$_\beta$ can be calculated.
 
 Visual representation of the vectors and the operations can be seen on Figure \ref{fig:cbeta}.
 
-\subsection{Gradient Descent Based Structure Optimization}
+% \subsection{Gradient Descent Based Structure Optimization}
 
-Gradient descent is method for gradual optimization of parameters of a model with a goal of decreasing some loss function. By model we understand a set of mathematical operations that take as an input the parameters and generate an output. 
+% Gradient descent is method for gradual optimization of parameters of a model with a goal of decreasing some loss function. By model we understand a set of mathematical operations that take as an input the parameters and generate an output. 
 
-In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second step of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids together with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure. The distributions of distances and torsion angles were used in the structure optimization algorithm to define a loss function and to create several random initial states of structures by sampling from the torsion angle distributions.
+% In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second step of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids together with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure. The distributions of distances and torsion angles were used in the structure optimization algorithm to define a loss function and to create several random initial states of structures by sampling from the torsion angle distributions.
 
-Gradient descent is a widely used method in many machine learning algorithms, and the main optimization technique for Neural Networks (see Algorithm \ref{alg:gd}). The algorithm simply finds a direction in the space of parameters, in which the loss function decreases the fastest and moves in this direction. This is repeated many times until the process is stopped. Algorithm \ref{alg:strucreal_gd} sketches the steps of the optimization steps, which will be explained in the following paragraphs:
+% Gradient descent is a widely used method in many machine learning algorithms, and the main optimization technique for Neural Networks (see Algorithm \ref{alg:gd}). The algorithm simply finds a direction in the space of parameters, in which the loss function decreases the fastest and moves in this direction. This is repeated many times until the process is stopped. Algorithm \ref{alg:strucreal_gd} sketches the steps of the optimization steps, which will be explained in the following paragraphs:
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{imgs_tomas/momentum.png}
-    \caption{Gradient Descent with Momentum}
-    \label{fig:momentum}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\linewidth]{imgs_tomas/momentum.png}
+%     \caption{Gradient Descent with Momentum}
+%     \label{fig:momentum}
+% \end{figure}
 
-\begin{algorithm}[ht]
-\caption{Structure Optimization}
-\label{alg:strucreal_gd}
-\begin{algorithmic}[1]
-\State Initialize $\bm{V}$
-\State Random sample of model parameters $(\phi, \psi)$
-    \Repeat
-        \State Forward pass through the model $\mathcal{G}((\phi, \psi))$
-        \State Calculate Loss
-        \State Backward pass - Calculate Gradients ($\nabla (\phi, \psi)$)
-        \State Normalize gradients
-        \State Update $\bm{V}$: $\bm{V} = \mu \bm{V} - \alpha \nabla (\phi, \psi)$
-        \State Update model parameters: $(\phi, \psi) = (\phi, \psi) + \bm{V}$
-    \Until{i = iterations}
-\end{algorithmic}
-\end{algorithm}
+% \begin{algorithm}[ht]
+% \caption{Structure Optimization}
+% \label{alg:strucreal_gd}
+% \begin{algorithmic}[1]
+% \State Initialize $\bm{V}$
+% \State Random sample of model parameters $(\phi, \psi)$
+%     \Repeat
+%         \State Forward pass through the model $\mathcal{G}((\phi, \psi))$
+%         \State Calculate Loss
+%         \State Backward pass - Calculate Gradients ($\nabla (\phi, \psi)$)
+%         \State Normalize gradients
+%         \State Update $\bm{V}$: $\bm{V} = \mu \bm{V} - \alpha \nabla (\phi, \psi)$
+%         \State Update model parameters: $(\phi, \psi) = (\phi, \psi) + \bm{V}$
+%     \Until{i = iterations}
+% \end{algorithmic}
+% \end{algorithm}
 
-In the first step we initialized a vector $\bm{V}$ which we used for implementing momentum. This is a simple idea the reuses gradient from previous iteration, where we no longer move in the direction of the steepest descent, but the direction is altered (dependent on the momentum parameter $\mu$) by adding the vector pointing in the direction of the last gradient. The principle of momentum is visualized on Figure \ref{fig:momentum}.
+% In the first step we initialized a vector $\bm{V}$ which we used for implementing momentum. This is a simple idea the reuses gradient from previous iteration, where we no longer move in the direction of the steepest descent, but the direction is altered (dependent on the momentum parameter $\mu$) by adding the vector pointing in the direction of the last gradient. The principle of momentum is visualized on Figure \ref{fig:momentum}.
 
-The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von-Misses distribution to the histograms. Von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
-$$\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$$ 
-where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
-The $\kappa$ parameter is called concentration ($\sim 1/\sigma^2$) and describes the dispersion and $\mu$ is the mean direction of the distribution \cite{vonmises}. 
+% The second step refers to sampling of the torsion angles from the angle distributions. We fitted a von-Misses distribution to the histograms. Von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is 
+% $$\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$$ 
+% where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
+% The $\kappa$ parameter is called concentration ($\sim 1/\sigma^2$) and describes the dispersion and $\mu$ is the mean direction of the distribution \cite{vonmises}. 
 
-In the next step the algorithm enters a cycle which ends after specified number iterations. In the first step of each iteration the model of protein geometry is created from current torsion angles ($(\phi, \psi)$), which are the parameters of the model, and the coordinates of backbone + C$_\beta$ atoms are computed. Finally a distance matrix is computed between all C$_\beta$ atoms of all residues (C$_\alpha$ for glycine).
+% In the next step the algorithm enters a cycle which ends after specified number iterations. In the first step of each iteration the model of protein geometry is created from current torsion angles ($(\phi, \psi)$), which are the parameters of the model, and the coordinates of backbone + C$_\beta$ atoms are computed. Finally a distance matrix is computed between all C$_\beta$ atoms of all residues (C$_\alpha$ for glycine).
 
-We used the distance distributions predicted by the neural network to define a loss function:
+% We used the distance distributions predicted by the neural network to define a loss function:
 
-\begin{equation}
-     V_{dist}(\mathcal{G}((\phi, \psi))) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
-     \label{eq:dist_pot}
-\end{equation}
+% \begin{equation}
+%      V_{dist}(\mathcal{G}((\phi, \psi))) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
+%      \label{eq:dist_pot}
+% \end{equation}
 
-which is a simple negative log-likelihood function. In order to calculate the loss at any inter-residue distance, we approximated the distance histograms with a normal distribution (scaled, so that its max probability is the same as for the particular distogram).
+% which is a simple negative log-likelihood function. In order to calculate the loss at any inter-residue distance, we approximated the distance histograms with a normal distribution (scaled, so that its max probability is the same as for the particular distogram).
 
-The sixth step of the algorithm refers to a computation of the gradients, which thankfully is done automatically by pytorch by calling the \texttt{.backward} method. In order to avoid exploding gradients, we divided the gradients by their standard deviation before updating the parameters. This ensured that the gradients were roughly on the same scale throughout the algorithm interations, while preserving their orientations. In the 8th and 9th step the parameters are updated with the possibility of reusing previous gradients, by setting the momentum parameter $\mu > 0$.
+% The sixth step of the algorithm refers to a computation of the gradients, which thankfully is done automatically by pytorch by calling the \texttt{.backward} method. In order to avoid exploding gradients, we divided the gradients by their standard deviation before updating the parameters. This ensured that the gradients were roughly on the same scale throughout the algorithm interations, while preserving their orientations. In the 8th and 9th step the parameters are updated with the possibility of reusing previous gradients, by setting the momentum parameter $\mu > 0$.
 
 \section{Evaluation Metrics}
 
-In order to assess the performance of different models and most importantly, evaluate the closeness of the predictions to the reality a good metric is neccessary. The metrics used in protein folding protocols usually divide into two classes: alignment free and alignment dependent. As the name of the first category suggests, these metrics do not require for the two structures to be aligned while the latter ones does. The advantage of the alignment free metrics is that they are faster to use, however the alignment requiring metrics provide more information. 
+In order to assess the performance of different models and most importantly, evaluate the closeness of the predictions to the reality a good metric is neccessary. The metrics used in protein folding protocols are usually divide into two classes: alignment free and alignment dependent. As the name of the first category suggests, these metrics do not require for the two structures to be aligned while the latter ones does. The advantage of the alignment free metrics is that they are faster to use, however the alignment requiring metrics provide more information. 
 
 We will first describe an alignment free metric we used for comparing and choosing between our models (DlDDT) and then the TM-Score metric, already mentioned in the introduction.
 
@@ -425,105 +433,10 @@ DlDDT = \frac{100}{4} \sum_{t \in \{0.5, 1, 2, 4\}} \frac
 
 \subsection{TM-score}
 
-
-
-% The entire protein structure defined by the set of two torsion angles was derived by successfully applying the rotational formula (\ref{eq:rotformula}), with the first three atoms arbitrarily placed. The coordinate of C$_\beta$ atom (C$_\alpha$ for glycin) was used to compute the inter-residue distances.
-
-% The protein geometry was implemented in \texttt{pytorch}, which means that the two torsion angles can be used as parameters to the model. \texttt{pytorch} allows for tracking the operations and builds a computational graph, which can then be efficiently backtracked and the gradients with regard to each parameter can be computed. 
-
-% In order to learn/optimize the structure, one requires some measure of how good the prediction matches the reality. In the second of the pipeline we used a neural network to predict 32 bin distance histogram for each pair of amino acids torgether with auxiliary targets - torsion angles (36 bins for $\phi$ and 36 bins for $\psi$) and 8 class secondary structure.
-
-% We used this distributions as a guide for the optimization process and defined a loss function:
+The Template Modelling score assesses the similarity between two three dimensional structures. As opposed to a simple RMSD metric, TM score is less inflated by outliers and favors folds with better aligned regions. TM-score also takes into account the length of the aligned region, which proved to be an important idea. The calculation requires structural alignment of the predicted and template structure\cite{tmscore}. The calculation and alignment of the structure was performed by the freely available TM-align package \cite{tmalign}.
 
 % \begin{equation}
-%     V(\phi, \psi) = V_{dist}(\mathcal{G}(\phi, \psi)) + V_{torsion}(\phi, \psi)
+%     TMscore = Max \left[ \frac{1}{L_N} \sum_{i = 1}^{L_T} \frac{1}{1 + (\frac{d_i}{d_0})^2)} \right]
+%     \label{eq:tmscore}    
 % \end{equation}
-
-% where $ V_{dist}(\mathcal{G}(\phi, \psi))$ is a distance potential and $V_{torsion}(\phi, \psi)$ is torsion angle potential. Both of these quantities are essentialy negative log likelihood formulas:
-
-% \begin{equation}
-%      V_{dist}(\mathcal{G}(\phi, \psi)) = -\sum_{i, j, i \neq j} log[\mathds{P} (d_{ij} | S, MSA(S))]
-% \end{equation}
-
-% \begin{equation}
-%     V_{torsion}(\phi, \psi) = -\sum_{i} log[\mathds{P}_{von Mises} (\phi, \psi | S, MSA(S))]
-% \end{equation}
-
-% which compute the log probability of a distribution at a certain value (\cite{alphafold} - supplementary information). In order for this to work properly, one has to work with smooth distributions (ie. derivatives can be calculated).
-
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=\linewidth]{imgs_tomas/norm_histograms.png}
-%     \caption{Spline fitted distance histograms (middle) and von-Mises fitted $\phi$ angle distributions (right) in the red region displayed on the distance map on the left}
-%     \label{fig:smooth_fits}
-% \end{figure}
-
-% We fitted a 3rd-degree spline to the distance histograms and von-Misses distribution \footnote{von Mises distribution is a continouous distribution defined on a circle in range $[-\pi, \pi)$ with a bell like shape. Formally its probability density function is $\mathds{P} = \frac{e^{\kappa cos(x - \mu)}}{2\pi I_0(\kappa)}$ where $I_0(\kappa) = \sum_{i=0}^\infty \frac{\kappa^{2i}}{2^{2i}(i!)^2}$ is a modified Bessel Function with order zero. 
-% The $\kappa$ parameter is a called concentration and describes the dispersion. 
-% $\mu$ is the mean direction of the distribution \cite{vonmises}} to the torsion angles distributions. 
-% These two distributions were also used by the authors of the AlphaFold project \cite{alphafold}.
-
-% Because there are so many possible protein conformations, the optimization is highly influenced by the initial conditions. 
-% The torsion angles can be sampled from the predicted distributions and ideally the optimization process is run several times.  
-        
-% \subsection{Simplified case in 2D}
-% Lets imagine the protein as a string of beads, where the beads right next to each other are constant distance away - lets call it $r$. 
-% Any conformation of such string can be fully described by the signed successive polar angles - see Figure \ref{fig:struct_real2d}.
-        
-% \begin{figure}[ht]
-%     \centering
-%     \includegraphics[scale=0.22]{imgs_tomas/simplified_2d.png}
-%     \caption{Caption}
-%     \label{fig:struct_real2d}
-% \end{figure}
-        
-% The left part of the figure introduces the notation when working with complex numbers. 
-% The right part shows an arrangement of 5 residues in 2D space. 
-% The grey-filled circles represent amino acid residues and the black vectors are the connections between residues of constant size $r$. 
-% The first vector (connecting residue 0 and residue 1) is anchored at the origin. 
-% The colorized vectors coming from the origin are translated versions of the remaining vectors. 
-        
-% In order to compute the distance between two residue, for example distance between residiue 0 and residue 4 (shown as a dotted line on the right hand side of the Figure \ref{fig:struct_real2d}) we need to add the contributions of every vector between those two points, ie:
-        
-% $$\bm{d_{0,4}} = \bm{d_{0,1}} + \bm{d_{1,2}} + \bm{d_{2,3}} + \bm{d_{3,4}}$$
-        
-% The magnitude of a complex number can be easily calculated from the Pythagorean formula:
-        
-% \begin{equation}
-%     |z|^2 = x^2 + y^2 = cos^2(\theta) + sin^2(\theta)
-%     \label{eq:complex_magnitude}
-% \end{equation}
-        
-% The distance (in general) is:
-        
-% \begin{equation}
-%     d_{i,j}^2 = r^2 |\bm{d_{0,1}} + \bm{d_{1,2}} + ... + \bm{d_{j-2,j-1}} + \bm{d_{j-1,j}}|^2
-%     \label{eq:dist_gen}
-% \end{equation}
-        
-% In complex representation (using both equation \ref{eq:complex_magnitude} and \ref{eq:dist_gen}):
-        
-% \begin{equation}
-%     d_{i,j}^2 = r^2 \left|\sum_{k=i}^j cos(\theta_k) + i sin(\theta_k)\right|^2 = r^2 \left[\left(\sum_{k=i}^j cos(\theta_k)\right)^2 + \left(\sum_{k=i}^j sin(\theta_k)\right)^2\right]
-%     \label{eq:dist_2d}
-% \end{equation}
-        
-% \subsection{Simplified case: 3D}
-        
-% In 3D, the case is almost the same as in 2D, we just need use another angle ($\phi$) to fully describe the arrangement. 
-% The transformation of Cartesian coordinates to polar is:
-        
-% $$x = r cos(\theta) sin(\phi)$$
-% $$y = r sin(\theta) sin(\phi)$$
-% $$z = r cos(\phi)$$
-   
-% The distance between two residues $i$ and $j$ in 3D is (just as in the 2D case) the magnitude of a vector pointing from residue $i$ to residue $j$. 
-% This vector is again the sum of all vectors between these two residues. 
-% Similarly to equation \ref{eq:dist_2d}, the formula for calculating (squared) distance between two residues in 3D is:
-        
-% \begin{equation}
-%     d_{i,j}^2 = r^2 \left[\left(\sum_{k=i}^j cos(\theta_k) sin(\phi_k)\right)^2 + \left(\sum_{k=i}^j sin(\theta_k) sin(\phi_k)\right)^2 + \left(\sum_{k=i}^j cos(\phi_k)\right)^2\right]
-% \end{equation}
-        
-% \subsection{Full Model}
 

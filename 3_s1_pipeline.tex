@@ -1,15 +1,22 @@
 \section{Pipeline}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{imgs_tomas/pipeline_input.png}
+    \caption{Input / Output data generation}
+    \label{fig:pipeline_input}
+\end{figure}
+
 The pipeline was constructed to formalize and automatize the process of data preparation for the neural networks.
-It was written in Snakemake workflow management system \cite{koster2012snakemake}, which is highly popular in the bioinformatics field with approximately 3 new citations each week.
+It was written in \texttt{Snakemake} workflow management system \cite{koster2012snakemake}, which is highly popular in the bioinformatics field with approximately 3 new citations every week.
 The workflows consists of rules, which define the data dependency in form of rule input files, rule output files and the script, which needs to be executed to get from input to output. 
-This definitions make using of Snakemake very convenient.
-The rules are defined as a subset of YAML, extended by the option to run python code directly.
-This makes them easily readable by humans.
+This definitions make using of \texttt{Snakemake} very convenient.
+The rules are defined as a subset of YAML, extended by the option to run python code directly, which makes them easily readable by humans.
 The structuring of the workflow allows seamless scalability to server environments and parallelization to multiple cluster nodes and multiple cores.
 This capability was very crucial for this project due to the amount of data available.
-Furthermore, Snakemake automatically checks for completed rules, which is in turn used to run only the rules needed for the defined target.
+Furthermore, \texttt{Snakemake} automatically checks for completed rules, which is in turn used to run only the rules needed for the defined target.
 It also check the exit code of the scripts and informs user if there is an error during the execution and therefore decreases a chance of working with faulty data to the minimum.
-Finally, conda \cite{conda}, the package management system, is nicely integrated into Snakemake, which simplifies the installation of most packages and bioinformatics tools needed during the analysis.
+Finally, \texttt{conda} \cite{conda}, the package management system, is nicely integrated into \texttt{Snakemake}, which simplifies the installation of most packages and bioinformatics tools needed during the analysis.
 It is also possible to fix package versions used during the analysis, which hugely improves reproducibility.
 Next, we present the main steps in the pipeline.
 The complete pipeline can be found on our GitHub repository \cite{github}.
@@ -19,10 +26,10 @@ The first step in the pipeline was the construction of the PSSMs of the protein 
 For this purpose, we used the PSI-BLAST \cite{altschul1997gapped}, an improved variation of the BLAST algorithm focused on PSSM construction.
 The PSI-BLAST first identifies proteins similar to our query protein from the database above a certain threshold.
 The threshold is inversely proportional to an E-value, which represents the number of expected hits in a database of a particular size just by random chance.
-In our project, we used a default E-value of 10.
+In our project, we used a default \texttt{E-value} of 10.
 The proteins identified as similar are then aligned to the query protein.
 Proteins with an insufficient alignment score are discarded from the set of similar proteins.
-Here, the parameter \textbf{-inclusion\_ethresh} is used to determine which alignments should be included in the set. 
+Here, the parameter \texttt{-inclusion\_ethresh} is used to determine which alignments should be included in the set. 
 Afterwards, the MSA is constructed from the set of similar proteins and the PSSM profile is calculated from this MSA.
 The PSSM profile is then used to identify proteins corresponding to this profile, in a similar fashion as the original sequence was used.
 A new PSSM profile is then calculated using these newly identified proteins.
@@ -43,20 +50,22 @@ Another step, parallel with the PSI-BLAST step was construction of MSA using HHb
 This MSA was later used as an input to the Potts models.
 The HHblits takes slightly different approach to MSA construction than the PSI-BLAST, which we considered an advantage, because the correlation of the input features to the neural networks was decreased.
 The HHblits first converts the query sequence to a Hidden Markov Model (HMM).
-This query HMM is then compared to HMMs from the database.
+%This query HMM is then compared to HMMs from the database.
+which is then compared to HMMs from the database.
 The database HMMs below a certain E-value threshold are then added to the query MSA, from which a query HMM for the next iteration is constructed.
 This process is then repeated defined number of times.
 In this project, we used E-value of 0.001 and 3 iterations to arrive at the final MSA.
 
 \subsection{plmc}
 To create a Potts models from the MSA, we used a plmc software from Debora Marks Lab \cite{plmc}.
-Given the MSA in FASTA format, this software produced the Potts models pairwise interactions $J$ values and the propensities $h$.
-Furthermore, we extracted Frobenius norm of the pairwise interactions.
+Given the MSA in FASTA format, the software produced two files: "couplings file" containing Frobenius norm of the $\bm{J}$ matrix and an optional binary "param file" containing the full $\bm{h}$ and $\bm{J}$ tensors. 
+% produced the Potts models pairwise interactions $J$ values and the propensities $h$.
+% Furthermore, we extracted Frobenius norm of the pairwise interactions.
 The plmc software used the second order optimization algorithm LBFG-S to iteratively fit these parameters.
-The number of maximum iterations used in our pipeline was 500.
+The number of maximum iterations used in our pipeline was set to 500 \cite{plmc}.
 % \cite{potts1}???
 
-\subsection{input creation}
+\subsection{Input encoding}
 The last step of the input preparation pipeline was to create an input tensor for the neural networks.
 We used the input tensor of size $L \times L \times C$, where $L$ is the length of the protein sequence and $C$ is the number of channels.
 To create such tensor, we used the Potts model parameters, one-hot encoded protein sequence and the PSSM profile.
@@ -75,22 +84,6 @@ The complete description of the input tensor was as follows.
 
 The positions, Potts model's propensities $h$, one-hot encoded protein sequence and PSSM profile were simply repeated $L$ times along the axis to match the required size.
 Both, repetition along the first and second axis, were used, therefore the resulting number of channels $C$ was $441 + 1 + 2 \cdot 1 + 2 \cdot 21 + 2 \cdot 21 + 2 \cdot 20 + 1 = 569$. 
-
-\subsection{Output encoding}
-
-The labels used for training were downloaded from the Protein Data Bank (PDB) which offers rich description of many proteins, including their tertiary structure. Domains with missing coordinates were filtered out of the dataset.
-        
-% For the reasons of structure realization and residue placement, AlphaFold (and also ProSPr) extracted the C$_\beta$ coordinates of the residues (C$_\alpha$ for glycine) \cite{alphafold}.
-
-Although distance is a continuous measure, and it would make perfect sense to treat the problem as a regression one, AlphaFold discretized the distances into 64 bins ranging from 2 to 22\AA, with one bin used for distances larger than 22\AA and one bin for missing data (in our case a zero padding label). 
-The reason for doing so becomes clearer after understanding of how the structure realization (the last step of the entire pipeline) was performed.
-
-To make the task slightly simpler for the neural network, we binned the distances into 32 bins (with the first bin - bin 0 used for missing values / padding and last bin for distances larger than 22 \AA).
-        
-The secondary structure was classified into 9 categories (padding label + 8 DSSP classes) suggested by DSSP (Dictionary of Protein Secondary Structure) \cite{dssp1, dssp2, dssp3}.
-The categories are shown in table \ref{tab:dssp0}.
-
-On top of the secondary structure classification, the output of the DSSP program also conveniently includes the torsion angles $\phi$ and $\psi$. These were categorized to 37 bins (padding label + bin for every 10\degree).
 
 \subsection{Data}
 
@@ -138,6 +131,22 @@ The distributions of CATH classes after filtering can be seen in Figure \ref{fig
     \label{fig:cath_filtered}
 \end{figure}
 
+\subsection{Output encoding}
+
+The labels used for training were downloaded from the Protein Data Bank (PDB) which offers rich description of proteins, including their tertiary structure. Domains with missing coordinates were filtered out of the dataset.
+        
+% For the reasons of structure realization and residue placement, AlphaFold (and also ProSPr) extracted the C$_\beta$ coordinates of the residues (C$_\alpha$ for glycine) \cite{alphafold}.
+
+Although distance is a continuous measure, and it would make perfect sense to treat the problem as a regression one, AlphaFold discretized the distances into 64 bins ranging from 2 to 22\AA, with one bin used for distances larger than 22\AA and one bin for missing data (in our case a zero padding label). 
+The reason for doing so becomes clearer after understanding of how the structure realization (the last step of the entire pipeline) was performed.
+
+To make the task slightly simpler for the neural network, we binned the distances into 32 bins (with the first bin - bin 0 used for missing values / padding and last bin for distances larger than 22 \AA).
+        
+The secondary structure was classified into 9 categories (padding label + 8 DSSP classes) suggested by DSSP (Dictionary of Protein Secondary Structure) \cite{dssp1, dssp2, dssp3}.
+The categories are shown in table \ref{tab:dssp0}.
+
+On top of the secondary structure classification, the output of the DSSP program also conveniently includes the torsion angles $\phi$ and $\psi$. These were categorized to 37 bins (padding label + bin for every 10\degree).
+
 \subsubsection{Train/Validation/Test split}
 
 \begin{figure}
@@ -147,14 +156,15 @@ The distributions of CATH classes after filtering can be seen in Figure \ref{fig
     \label{fig:cath_trainvaltest}
 \end{figure}
 
-In the AlphaFold paper \cite{alphafold}, the authors decided (and so did we) to create train/validation/test set of homologous superfamilies instead of randomly sampling domains. 
+%In the AlphaFold paper \cite{alphafold}, the authors decided (and so did we) 
+Following the example of Alphafold \cite{alphafold} we decided to create train/validation/test set of homologous superfamilies instead of randomly sampling domains. 
 The rationale behind this is to include all members of each homologous superfamily in either training, validation or test set. 
-This ensures that when evaluating the model performance of a set of proteins, that very similar proteins were not used for training. 
+This ensures that when evaluating the model performance on a set of proteins, that very similar proteins were not used for training. 
     
-We decided to train our models on a set of 9394 domains (several had to be excluded due to factors such as low sequence similarity to known structures or inability to converge/slow convergence of the Potts Model). This set of domains was used to train the neural networks and for the estimation of the loss during the training process.
+We decided to train our models on a set of 9394 domains (several had to be excluded due to factors such as low sequence similarity to known structures or inability to converge/slow convergence of the Direct Coupling Analysis). This set of domains was used to train the neural networks and for the estimation of the loss during the training process.
 
 The performance of the different models was evaluated on an independent validation set of 1000 domains. For each model we evaluated its inter-residue distance predictions as well as the auxiliary outputs (secondary structure and phi and psi torsion angles).
 
 The final structures and performance metrics were evaluated on a set of 500 test domains.
     
-Furthermore, to simulate the famous CASP competition we downloaded the domains from CASP13 (2018) - regular targets category (T). This allowed us to compare our results with the best teams in the world.
+Furthermore, to simulate the famous CASP competition we downloaded 13 domains from CASP13 (2018) - regular targets category (T). This allowed us to compare our results with the best teams in the world.
